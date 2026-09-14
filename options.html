@@ -9,12 +9,14 @@
 <body>
   <main>
     <header><span class="mark">译</span><div><h1>译读设置</h1><p>密钥仅保存在当前浏览器中。</p></div></header>
-    <form id="settingsForm">
-      <label for="apiKey">DeepSeek API Key</label>
-      <input id="apiKey" name="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" required>
-      <label for="model">模型</label>
-      <input id="model" name="model" type="text" autocomplete="off" spellcheck="false" value="deepseek-chat" required>
-      <button type="submit">保存设置</button>
+    <form id="settingsForm" aria-busy="true">
+      <fieldset disabled>
+        <label for="apiKey">DeepSeek API Key</label>
+        <input id="apiKey" name="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" required>
+        <label for="model">模型</label>
+        <input id="model" name="model" type="text" autocomplete="off" spellcheck="false" value="deepseek-chat" required>
+        <button type="submit">保存设置</button>
+      </fieldset>
       <p id="status" aria-live="polite"></p>
     </form>
   </main>

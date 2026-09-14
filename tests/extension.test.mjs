@@ -6,6 +6,8 @@ const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("manifest.json", root), "utf8"));
 const content = await readFile(new URL("content.js", root), "utf8");
 const styles = await readFile(new URL("content.css", root), "utf8");
+const optionsHtml = await readFile(new URL("options.html", root), "utf8");
+const optionsScript = await readFile(new URL("options.js", root), "utf8");
 
 test("configures a local Manifest V3 Chrome extension", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -28,4 +30,13 @@ test("highlights terms without prohibited visual shortcuts", () => {
   assert.doesNotMatch(styles, /font-style:\s*italic/);
   assert.doesNotMatch(styles, /#[0]{6}\b/i);
   assert.doesNotMatch(styles, /border-left:\s*[2-9]px/);
+});
+
+test("loads settings before enabling input and verifies persistence", () => {
+  assert.match(optionsHtml, /<fieldset disabled>/);
+  assert.match(optionsHtml, /aria-busy="true"/);
+  assert.match(optionsScript, /await chrome\.storage\.local\.get/);
+  assert.match(optionsScript, /await chrome\.storage\.local\.set/);
+  assert.match(optionsScript, /保存校验失败/);
+  assert.match(optionsScript, /fieldset\.disabled = false/);
 });
