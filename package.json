@@ -1,0 +1,9 @@
+{
+  "name": "article-translator-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check tests/article-translator-demo.test.mjs"
+  }
+}
