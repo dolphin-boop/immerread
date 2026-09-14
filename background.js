@@ -1,8 +1,15 @@
 import {
+  CACHE_STORAGE_KEY,
+  mergeCachedItems,
+  readCachedItems
+} from "./lib/cache.js";
+import {
   buildTranslationMessages,
   getDefaultModel,
   parseTranslationResponse
 } from "./lib/translation.js";
+
+let cacheWriteChain = Promise.resolve();
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || !tab.url || !/^https?:/i.test(tab.url)) return;
@@ -26,10 +33,47 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
 
-  if (message?.type !== "YIDU_TRANSLATE_BATCH") return false;
-  translateBatch(message.payload).then(sendResponse);
+  const handlers = {
+    YIDU_TRANSLATE_BATCH: translateBatch,
+    YIDU_CACHE_GET: getCachedTranslations,
+    YIDU_CACHE_PUT: putCachedTranslations
+  };
+  const handler = handlers[message?.type];
+  if (!handler) return false;
+  handler(message.payload).then(sendResponse);
   return true;
 });
+
+async function getModel() {
+  const settings = await chrome.storage.local.get("deepseekModel");
+  return settings.deepseekModel || getDefaultModel();
+}
+
+async function getCachedTranslations(payload) {
+  try {
+    const stored = await chrome.storage.local.get(CACHE_STORAGE_KEY);
+    const result = readCachedItems(stored[CACHE_STORAGE_KEY], {
+      ...payload,
+      model: await getModel()
+    });
+    return { ok: true, items: result.items };
+  } catch {
+    return { ok: true, items: [] };
+  }
+}
+
+function putCachedTranslations(payload) {
+  cacheWriteChain = cacheWriteChain.catch(() => undefined).then(async () => {
+    const stored = await chrome.storage.local.get(CACHE_STORAGE_KEY);
+    const cache = mergeCachedItems(stored[CACHE_STORAGE_KEY], {
+      ...payload,
+      model: await getModel()
+    });
+    await chrome.storage.local.set({ [CACHE_STORAGE_KEY]: cache });
+    return { ok: true };
+  });
+  return cacheWriteChain.catch(() => ({ ok: false }));
+}
 
 async function translateBatch(payload) {
   try {

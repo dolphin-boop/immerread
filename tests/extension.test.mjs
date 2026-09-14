@@ -31,6 +31,11 @@ test("keeps the MVP reader focused on bilingual comparison", () => {
   assert.match(content, /role="switch" aria-checked="false"/);
   assert.match(content, /data-terms-visible="false"/);
   assert.match(content, /toggleTermHighlights/);
+  assert.match(content, /IntersectionObserver/);
+  assert.match(content, /YIDU_CACHE_GET/);
+  assert.match(content, /YIDU_CACHE_PUT/);
+  assert.match(content, /splitOversizedText/);
+  assert.doesNotMatch(content, /segments\.length >= 64|totalCharacters \+ text\.length > 30000/);
 });
 
 test("highlights terms without prohibited visual shortcuts", () => {

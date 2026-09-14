@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check background.js && node --check content.js && node --check options.js && node --check lib/translation.js"
+    "check": "node --check background.js && node --check content.js && node --check options.js && node --check lib/translation.js && node --check lib/cache.js"
   }
 }
