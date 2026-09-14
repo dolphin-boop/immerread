@@ -77,20 +77,29 @@
 
   async function getArticleFromTab(tabId) {
     await waitForTabReady(tabId);
-    let lastMessage = "无法读取当前页面，请刷新页面后重试。";
+    try {
+      return await chrome.tabs.sendMessage(tabId, { type: "YIDU_GET_ARTICLE" });
+    } catch {
+      // The receiver disappears when an unpacked extension is reloaded while the
+      // article tab stays open. Ask the service worker to inject it again.
+    }
+
+    const prepared = await chrome.runtime.sendMessage({
+      type: "YIDU_PREPARE_TAB",
+      payload: { tabId }
+    });
+    if (!prepared?.ok) {
+      return prepared || { ok: false, message: "无法读取当前页面，请刷新页面后重试。" };
+    }
+
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         return await chrome.tabs.sendMessage(tabId, { type: "YIDU_GET_ARTICLE" });
-      } catch (error) {
-        lastMessage = error?.message || lastMessage;
-        if (attempt === 0) {
-          const prepared = await chrome.runtime.sendMessage({ type: "YIDU_PREPARE_TAB", payload: { tabId } });
-          if (!prepared?.ok) lastMessage = prepared?.message || lastMessage;
-        }
+      } catch {
         await delay(180);
       }
     }
-    return { ok: false, message: lastMessage };
+    return { ok: false, message: "页面连接失败，请刷新文章页面后重试。" };
   }
 
   async function waitForTabReady(tabId) {

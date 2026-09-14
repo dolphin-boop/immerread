@@ -21,7 +21,10 @@ test("configures a local Manifest V3 side panel extension", () => {
   assert.ok(manifest.permissions.includes("sidePanel"));
   assert.ok(manifest.permissions.includes("tabs"));
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
+  assert.ok(manifest.host_permissions.includes("http://*/*"));
+  assert.ok(manifest.host_permissions.includes("https://*/*"));
   assert.match(background, /openPanelOnActionClick:\s*true/);
+  assert.match(background, /chrome\.scripting\.executeScript/);
 });
 
 test("extracts article semantics without rebuilding the source page", () => {
@@ -48,6 +51,8 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /YIDU_REQUEST_SCROLL_SYNC/);
   assert.match(panelScript, /waitForTabReady/);
   assert.match(panelScript, /attempt < 3/);
+  assert.match(panelScript, /页面连接失败，请刷新文章页面后重试/);
+  assert.doesNotMatch(panelScript, /lastMessage = error\?\.message/);
   assert.match(panelScript, /YIDU_CACHE_GET/);
   assert.match(panelScript, /YIDU_CACHE_PUT/);
   assert.match(panelScript, /sanitizeNode/);
