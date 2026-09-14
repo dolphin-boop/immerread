@@ -9,6 +9,8 @@ test("renders paired English and Chinese article content", () => {
   assert.match(html, /TRANSLATION · 简体中文/);
   assert.equal((html.match(/class="pair"/g) ?? []).length, 4);
   assert.equal((html.match(/class="paragraph translated"/g) ?? []).length, 4);
+  assert.doesNotMatch(html, /class="number"/);
+  assert.doesNotMatch(html, /4 \/ 4 段/);
 });
 
 test("exposes the core demo interactions accessibly", () => {
