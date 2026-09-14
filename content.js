@@ -5,8 +5,16 @@
   const MAX_SEGMENT_CHARS = 1200;
   const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, blockquote, li";
   const EXCLUDED_SELECTOR = "nav, footer, aside, form, script, style, pre, code, figure, [aria-hidden='true']";
+  let trackedBlocks = [];
+  let trackedIndex = 0;
+  let scrollFrame = 0;
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "YIDU_REQUEST_SCROLL_SYNC") {
+      scheduleScrollSync();
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type !== "YIDU_GET_ARTICLE") return false;
     try {
       sendResponse({ ok: true, article: extractArticle() });
@@ -15,6 +23,7 @@
     }
     return false;
   });
+  window.addEventListener("scroll", scheduleScrollSync, { passive: true });
 
   function extractArticle() {
     const candidates = [...document.querySelectorAll("article, main, [role='main']")];
@@ -23,6 +32,7 @@
       .sort((left, right) => right.score - left.score)[0]?.element || document.body;
     const nodes = [...container.querySelectorAll(BLOCK_SELECTOR)];
     const segments = [];
+    const nextTrackedBlocks = [];
 
     for (const node of nodes) {
       if (node.closest(EXCLUDED_SELECTOR)) continue;
@@ -36,9 +46,11 @@
       const chunks = text.length > MAX_SEGMENT_CHARS
         ? splitOversizedText(text).map((chunk) => ({ text: chunk, markup: escapeHtml(chunk), links: [] }))
         : [{ text, markup: serialized.markup, links: serialized.links }];
-      for (const chunk of chunks) {
-        segments.push({ id: `s${segments.length + 1}`, kind, ...chunk });
-      }
+      chunks.forEach((chunk, chunkIndex) => {
+        const segment = { id: `s${segments.length + 1}`, kind, ...chunk };
+        segments.push(segment);
+        if (chunkIndex === 0) nextTrackedBlocks.push({ id: segment.id, node });
+      });
     }
 
     if (!segments.length) throw new Error("没有识别到可翻译的英文文章正文。");
@@ -48,10 +60,37 @@
       segments.unshift(titleSegment);
     }
     const title = titleSegment?.text || "Untitled article";
+    trackedBlocks = nextTrackedBlocks;
+    trackedIndex = 0;
     const canonicalUrl = document.querySelector('link[rel="canonical"]')?.href || location.href;
     return { title, source: location.hostname, url: canonicalUrl, segments };
   }
 
+  function scheduleScrollSync() {
+    if (!trackedBlocks.length || scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      emitScrollSync();
+    });
+  }
+
+  function emitScrollSync() {
+    if (!trackedBlocks.length) return;
+    const anchor = window.innerHeight * 0.35;
+    while (trackedIndex + 1 < trackedBlocks.length && trackedBlocks[trackedIndex + 1].node.getBoundingClientRect().top <= anchor) {
+      trackedIndex += 1;
+    }
+    while (trackedIndex > 0 && trackedBlocks[trackedIndex].node.getBoundingClientRect().top > anchor) {
+      trackedIndex -= 1;
+    }
+    const current = trackedBlocks[trackedIndex];
+    const rect = current.node.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (anchor - rect.top) / Math.max(rect.height, 1)));
+    void chrome.runtime.sendMessage({
+      type: "YIDU_SOURCE_SCROLL",
+      payload: { segmentId: current.id, ratio }
+    }).catch(() => undefined);
+  }
   function prepareBlock(node) {
     const clone = node.cloneNode(true);
     if (node.matches("li")) clone.querySelectorAll("ul, ol").forEach((list) => list.remove());

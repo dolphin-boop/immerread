@@ -26,6 +26,8 @@ test("configures a local Manifest V3 side panel extension", () => {
 
 test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /YIDU_GET_ARTICLE/);
+  assert.match(content, /YIDU_SOURCE_SCROLL/);
+  assert.match(content, /requestAnimationFrame/);
   assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li/);
   assert.match(content, /<strong>/);
   assert.match(content, /<u>/);
@@ -42,6 +44,8 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelHtml, /AI 术语高亮/);
   assert.doesNotMatch(panelHtml, /当前位置|已读/);
   assert.match(panelScript, /IntersectionObserver/);
+  assert.match(panelScript, /handleSourceScroll/);
+  assert.match(panelScript, /YIDU_REQUEST_SCROLL_SYNC/);
   assert.match(panelScript, /waitForTabReady/);
   assert.match(panelScript, /attempt < 3/);
   assert.match(panelScript, /YIDU_CACHE_GET/);

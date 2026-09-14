@@ -114,11 +114,21 @@ try:
                 if screenshot_path:
                     panel.screenshot(path=screenshot_path, full_page=False)
 
-                panel.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
-                panel.locator(".yidu-segment").last.scroll_into_view_if_needed()
-                panel.wait_for_function(
-                    "document.querySelector('.yidu-segment:last-child')?.dataset.translated === 'true'"
-                )
+                initial_panel_scroll = panel.evaluate("window.scrollY")
+                article_scroll = article_page.evaluate("""() => {
+                  document.documentElement.style.scrollBehavior = "auto";
+                  window.scrollTo(0, document.documentElement.scrollHeight);
+                  return window.scrollY;
+                }""")
+                assert article_scroll > 0
+                sync_deadline = time.monotonic() + 10
+                while panel.evaluate("window.scrollY") <= initial_panel_scroll + 100 and time.monotonic() < sync_deadline:
+                    time.sleep(0.05)
+                assert panel.evaluate("window.scrollY") > initial_panel_scroll + 100, "原文滚动没有带动右侧译文"
+                last_segment = panel.locator(".yidu-segment").last
+                while last_segment.get_attribute("data-translated") != "true" and time.monotonic() < sync_deadline:
+                    time.sleep(0.05)
+                assert last_segment.get_attribute("data-translated") == "true"
                 time.sleep(0.3)
                 calls_before_reload = worker.evaluate("globalThis.__yiduFetchCalls")
                 assert calls_before_reload >= 2
@@ -132,7 +142,7 @@ try:
                 assert worker.evaluate("globalThis.__yiduFetchCalls") == calls_before_reload
                 assert panel.locator("#yidu-article-reader").count() == 0
                 assert article_page.locator("#yidu-article-reader").count() == 0
-                print(f"PASS: {row_count} semantic blocks, side panel translation, formatting, and cache restore")
+                print(f"PASS: {row_count} semantic blocks, source-scroll sync, formatting, and cache restore")
             finally:
                 context.close()
 finally:

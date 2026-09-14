@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "译读",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minimum_chrome_version": "114",
   "description": "在 Chrome 右侧边栏中使用 LLM 翻译英文网页文章。",
   "permissions": ["storage", "scripting", "activeTab", "sidePanel", "tabs"],

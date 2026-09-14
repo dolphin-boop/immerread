@@ -22,6 +22,10 @@
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (changeInfo.status === "complete" && tab.active) scheduleReload();
   });
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type === "YIDU_SOURCE_SCROLL") handleSourceScroll(message.payload, sender.tab?.id);
+    return false;
+  });
 
   void loadActiveArticle();
 
@@ -30,6 +34,22 @@
     reloadTimer = window.setTimeout(() => void loadActiveArticle(), 120);
   }
 
+  function handleSourceScroll(payload, tabId) {
+    const current = session;
+    if (!current || current.stopped || tabId !== current.tabId) return;
+    const row = current.rows.get(String(payload?.segmentId || ""));
+    if (!row) return;
+    const index = current.article.segments.findIndex((segment) => segment.id === row.dataset.segmentId);
+    current.article.segments.slice(index, index + BATCH_SIZE).forEach((segment) => enqueue(current, segment));
+    requestAnimationFrame(() => {
+      if (current.stopped) return;
+      const rect = row.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, Number(payload?.ratio || 0)));
+      const target = window.scrollY + rect.top + rect.height * ratio - window.innerHeight * 0.35;
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.max(0, Math.min(maxScroll, target)));
+    });
+  }
   async function loadActiveArticle() {
     stopSession();
     setStatus("正在读取文章…");
@@ -42,7 +62,7 @@
       if (!response?.ok || !response.article?.segments?.length) {
         throw new Error(response?.message || "没有识别到可翻译的英文文章正文。");
       }
-      startSession(response.article);
+      startSession(response.article, tab.id);
     } catch (error) {
       showEmpty(error?.message || "无法读取当前页面。", true);
     }
@@ -85,9 +105,10 @@
     return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
   }
 
-  function startSession(article) {
+  function startSession(article, tabId) {
     const next = {
       article,
+      tabId,
       rows: new Map(),
       segmentsById: new Map(article.segments.map((segment) => [segment.id, segment])),
       translations: new Map(),
@@ -106,7 +127,9 @@
     session = next;
     renderArticle(next);
     void restoreCache(next).then(() => {
-      if (!next.stopped) startViewportTranslation(next);
+      if (next.stopped) return;
+      startViewportTranslation(next);
+      void chrome.tabs.sendMessage(next.tabId, { type: "YIDU_REQUEST_SCROLL_SYNC" }).catch(() => undefined);
     });
   }
 
