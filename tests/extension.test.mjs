@@ -28,6 +28,9 @@ test("keeps the MVP reader focused on bilingual comparison", () => {
   assert.doesNotMatch(content, /仅中文|重新翻译/);
   assert.match(content, /YIDU_TRANSLATE_BATCH/);
   assert.match(content, /className = "yidu-term"/);
+  assert.match(content, /role="switch" aria-checked="false"/);
+  assert.match(content, /data-terms-visible="false"/);
+  assert.match(content, /toggleTermHighlights/);
 });
 
 test("highlights terms without prohibited visual shortcuts", () => {

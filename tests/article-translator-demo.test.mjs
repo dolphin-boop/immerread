@@ -20,6 +20,8 @@ test("exposes the core demo interactions accessibly", () => {
   assert.match(html, /prefers-reduced-motion/);
   assert.doesNotMatch(html, />仅中文</);
   assert.doesNotMatch(html, />重新翻译</);
+  assert.match(html, /role="switch" aria-checked="false"/);
+  assert.match(html, /data-terms-visible="false"/);
 });
 
 test("keeps prohibited visual patterns out of the interface", () => {

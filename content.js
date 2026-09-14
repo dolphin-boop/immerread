@@ -27,6 +27,7 @@
     root.innerHTML = createReaderMarkup(article);
     document.documentElement.append(root);
     root.querySelector(".yidu-close").addEventListener("click", closeReader);
+    root.querySelector(".yidu-term-toggle").addEventListener("click", toggleTermHighlights);
     document.addEventListener("keydown", handleEscape);
 
     await translateArticle(root, article);
@@ -68,10 +69,10 @@
       </section>`).join("");
 
     return `
-      <div class="yidu-reader" role="dialog" aria-modal="true" aria-label="英文文章双语翻译">
+      <div class="yidu-reader" data-terms-visible="false" role="dialog" aria-modal="true" aria-label="英文文章双语翻译">
         <header class="yidu-toolbar">
           <div class="yidu-brand"><span class="yidu-mark">译</span><span>译读</span></div>
-          <nav class="yidu-tabs" aria-label="阅读功能"><span class="yidu-tab" aria-current="page">双语对照</span></nav>
+          <nav class="yidu-tabs" aria-label="阅读功能"><span class="yidu-tab" aria-current="page">双语对照</span><button class="yidu-term-toggle" type="button" role="switch" aria-checked="false"><span>专有名词高亮</span><i aria-hidden="true"></i></button></nav>
           <div class="yidu-progress" role="status" aria-live="polite">正在准备翻译…</div>
           <button class="yidu-close" type="button" aria-label="关闭双语阅读">×</button>
         </header>
@@ -195,6 +196,13 @@
     notice.textContent = message;
     document.documentElement.append(notice);
     window.setTimeout(() => notice.remove(), 4000);
+  }
+
+  function toggleTermHighlights(event) {
+    const button = event.currentTarget;
+    const enabled = button.getAttribute("aria-checked") !== "true";
+    button.setAttribute("aria-checked", String(enabled));
+    button.closest(".yidu-reader").dataset.termsVisible = String(enabled);
   }
 
   function handleEscape(event) {

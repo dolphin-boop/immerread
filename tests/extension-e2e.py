@@ -51,6 +51,15 @@ with sync_playwright() as playwright:
             assert reader.get_by_text("双语对照", exact=True).count() == 1
             assert reader.get_by_text("仅中文", exact=True).count() == 0
             assert reader.get_by_text("重新翻译", exact=True).count() == 0
+            toggle = reader.get_by_role("switch", name="专有名词高亮")
+            assert toggle.get_attribute("aria-checked") == "false"
+            assert reader.locator(".yidu-reader").get_attribute("data-terms-visible") == "false"
+            toggle.click()
+            assert toggle.get_attribute("aria-checked") == "true"
+            assert reader.locator(".yidu-reader").get_attribute("data-terms-visible") == "true"
+            toggle.click()
+            assert toggle.get_attribute("aria-checked") == "false"
+            assert reader.locator(".yidu-reader").get_attribute("data-terms-visible") == "false"
             assert page.locator(".yidu-pair").count() > 0
             print("PASS: extension reader opened and extracted article segments")
         finally:
