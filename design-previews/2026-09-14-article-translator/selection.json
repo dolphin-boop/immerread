@@ -1,0 +1,14 @@
+{
+  "id": "C",
+  "label": "C: 双语书页",
+  "name": "双语书页",
+  "notes": "",
+  "dials": {
+    "variance": 4,
+    "motion": 3,
+    "density": 7
+  },
+  "adjustments": "",
+  "source": "click",
+  "receivedAt": "2026-09-14T08:00:59.077Z"
+}

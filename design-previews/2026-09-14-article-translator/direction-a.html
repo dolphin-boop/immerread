@@ -1,0 +1,156 @@
+<style>
+  .dir-a {
+    --da-ink: #211f1a;
+    --da-muted: #746f65;
+    --da-rule: #d9d3c7;
+    --da-paper: #fbfaf6;
+    --da-wash: #f1eee6;
+    --da-accent: #a6472b;
+    color: var(--da-ink);
+    background: #e9e5dc;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+
+  .dir-a * { box-sizing: border-box; }
+
+  .dir-a .da-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--da-paper);
+    border: 1px solid #cbc5b9;
+    box-shadow: 0 16px 40px rgba(55, 48, 36, .12);
+  }
+
+  .dir-a .da-toolbar {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--da-rule);
+    background: rgba(255, 255, 255, .55);
+  }
+
+  .dir-a .da-mark {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--da-ink);
+    border-radius: 50%;
+    font: 700 12px/1 Georgia, serif;
+  }
+
+  .dir-a .da-product { font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+  .dir-a .da-status { margin-left: auto; font-size: 12px; color: var(--da-muted); }
+  .dir-a .da-dot { color: #4b7652; margin-right: 6px; }
+
+  .dir-a .da-button {
+    border: 1px solid var(--da-ink);
+    background: var(--da-ink);
+    color: #fff;
+    border-radius: 3px;
+    padding: 8px 13px;
+    font: 650 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    cursor: pointer;
+  }
+
+  .dir-a .da-header { padding: 34px 42px 28px; border-bottom: 3px double var(--da-rule); }
+  .dir-a .da-kicker { color: var(--da-accent); font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+  .dir-a h2 { max-width: 760px; margin: 10px 0 12px; font: 700 34px/1.08 Georgia, "Times New Roman", serif; letter-spacing: -.025em; }
+  .dir-a .da-deck { max-width: 780px; margin: 0; color: #565148; font-size: 14px; line-height: 1.55; }
+
+  .dir-a .da-columns-head,
+  .dir-a .da-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dir-a .da-columns-head { border-bottom: 1px solid var(--da-rule); background: var(--da-wash); }
+  .dir-a .da-col-label { padding: 12px 42px; font-size: 11px; font-weight: 750; letter-spacing: .12em; color: var(--da-muted); }
+  .dir-a .da-col-label + .da-col-label { border-left: 1px solid var(--da-rule); }
+  .dir-a .da-pair { border-bottom: 1px solid var(--da-rule); }
+  .dir-a .da-pair:last-child { border-bottom: 0; }
+
+  .dir-a .da-block {
+    min-width: 0;
+    padding: 24px 42px 26px;
+    font-size: 15px;
+    line-height: 1.76;
+  }
+
+  .dir-a .da-en { font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+  .dir-a .da-zh { border-left: 1px solid var(--da-rule); font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .dir-a .da-block p { margin: 0; }
+  .dir-a .da-num { display: block; margin-bottom: 9px; color: #9a9489; font: 650 10px/1 sans-serif; letter-spacing: .08em; }
+  .dir-a .da-term { background: #f1dfb8; padding: 1px 3px; border-radius: 2px; }
+  .dir-a .da-note { margin-top: 13px; color: var(--da-accent); font-size: 11px; font-weight: 650; }
+
+  @media (max-width: 760px) {
+    .dir-a { padding: 10px; }
+    .dir-a .da-header { padding: 26px 22px 22px; }
+    .dir-a h2 { font-size: 27px; }
+    .dir-a .da-col-label, .dir-a .da-block { padding-left: 22px; padding-right: 22px; }
+    .dir-a .da-status { display: none; }
+  }
+</style>
+
+<section class="dir-a" aria-label="英文文章翻译插件方向 A 预览">
+  <div class="da-shell">
+    <div class="da-toolbar">
+      <span class="da-mark">译</span>
+      <span class="da-product">Margin · Article Translator</span>
+      <span class="da-status"><span class="da-dot">●</span>DeepSeek 已连接 · 3 段已翻译</span>
+      <button class="da-button" type="button">重新翻译</button>
+    </div>
+
+    <header class="da-header">
+      <div class="da-kicker">Artificial Intelligence · Essay</div>
+      <h2>Why Language Models Are Becoming a New Reading Interface</h2>
+      <p class="da-deck">原网页结构被保留，中文译文固定出现在对应段落右侧。阅读视线横向移动，不需要在原文与弹窗之间来回切换。</p>
+    </header>
+
+    <div class="da-columns-head" aria-hidden="true">
+      <div class="da-col-label">ORIGINAL · ENGLISH</div>
+      <div class="da-col-label">TRANSLATION · 简体中文</div>
+    </div>
+
+    <main>
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">01</span>
+          <p>For most of the web's history, reading tools have treated text as a finished surface. A page could be saved, highlighted, or searched—but its language remained fixed.</p>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">01</span>
+          <p>在互联网历史的大部分时间里，阅读工具都把文本视为一个已经完成的界面。网页可以被保存、标注或搜索，但它所使用的语言始终固定不变。</p>
+        </div>
+      </article>
+
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">02</span>
+          <p>Large language models change that relationship. Instead of replacing the article, they can create a <span class="da-term">parallel reading layer</span> that follows the author's structure paragraph by paragraph.</p>
+          <div class="da-note">TERM · parallel reading layer</div>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">02</span>
+          <p>大语言模型改变了这种关系。它不必取代原文，而是可以创建一个<span class="da-term">平行阅读层</span>，逐段跟随作者原有的文章结构。</p>
+          <div class="da-note">术语 · 平行阅读层</div>
+        </div>
+      </article>
+
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">03</span>
+          <p>The useful unit is not the entire document, but the paragraph. Keeping each translation beside its source preserves context, makes errors easier to spot, and lets the reader move at their own pace.</p>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">03</span>
+          <p>真正有用的单位不是整篇文档，而是段落。将每段译文放在原文旁边，既能保留上下文，也更容易发现翻译错误，并让读者按自己的节奏阅读。</p>
+        </div>
+      </article>
+    </main>
+  </div>
+</section>

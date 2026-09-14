@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>文章翻译插件 · 设计方向</title>
+  <style>
+    :root{color-scheme:light;--ink:#242724;--muted:#686e69;--line:#d9ddd8;--paper:#f6f7f4;--accent:#315c49;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6;overflow-x:hidden}.page{width:min(1500px,calc(100% - 32px));margin:0 auto;padding:34px 0 72px}.intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end;margin-bottom:24px}.intro h1{margin:0;font-family:"Aptos Display","Segoe UI",sans-serif;font-size:clamp(25px,3vw,42px);font-weight:600;letter-spacing:-.035em;text-wrap:balance}.intro p{margin:6px 0 0;color:var(--muted)}.dials{display:flex;gap:16px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}.dial{min-width:126px}.dial label{display:flex;justify-content:space-between;font-size:12px;font-weight:500}.dial output{font-family:ui-monospace,monospace;color:var(--accent)}.dial input{width:100%;accent-color:var(--accent)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.option{min-width:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 4px 16px rgba(35,44,38,.055)}.option-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 10px}.option h2{margin:0;font-size:15px;font-weight:600}.tag{color:var(--muted);font-size:12px}.recommended{display:inline-flex;padding:2px 7px;border-radius:999px;background:#dce8e0;color:#254837;font-size:11px;font-weight:600}.stage{height:460px;overflow:auto;border:1px solid #d5d9d5;border-radius:9px;background:#eef0ed}.stage>section,.stage>.dir-d{min-height:100%}.details{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}.details h2{font-size:16px;margin:0 0 12px}.detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}.detail-grid h3{font-size:14px;margin:0 0 4px}.detail-grid p{margin:0;color:var(--muted);font-size:13px}.why{color:#254837!important;font-weight:500}@media(max-width:900px){.intro{grid-template-columns:1fr}.dials{overflow-x:auto}.grid{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.page{width:min(100% - 18px,1500px);padding-top:18px}.dials{display:grid;grid-template-columns:1fr}.grid,.detail-grid{grid-template-columns:1fr}.stage{height:520px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <div><h1>英文文章翻译插件 · 阅读界面</h1><p>这是设计方向样机，不是最终 App；选择后才进入正式实现。</p></div>
+      <div class="dials" aria-label="设计参数">
+        <div class="dial"><label for="variance">视觉冒险度 <output id="varianceValue">4</output></label><input id="variance" name="variance" type="range" min="1" max="10" value="4"></div>
+        <div class="dial"><label for="motion">动效强度 <output id="motionValue">3</output></label><input id="motion" name="motion" type="range" min="1" max="10" value="3"></div>
+        <div class="dial"><label for="density">信息密度 <output id="densityValue">7</output></label><input id="density" name="density" type="range" min="1" max="10" value="7"></div>
+      </div>
+    </header>
+    <section class="grid" aria-label="四个设计方向">
+      <article class="option card" data-design-option="A" data-name="编辑对照"><div class="option-head"><h2>A · 编辑对照</h2><span class="tag">逐段严格对齐</span></div><div class="stage"><style>
+  .dir-a {
+    --da-ink: #211f1a;
+    --da-muted: #746f65;
+    --da-rule: #d9d3c7;
+    --da-paper: #fbfaf6;
+    --da-wash: #f1eee6;
+    --da-accent: #a6472b;
+    color: var(--da-ink);
+    background: #e9e5dc;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+
+  .dir-a * { box-sizing: border-box; }
+
+  .dir-a .da-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--da-paper);
+    border: 1px solid #cbc5b9;
+    box-shadow: 0 16px 40px rgba(55, 48, 36, .12);
+  }
+
+  .dir-a .da-toolbar {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--da-rule);
+    background: rgba(255, 255, 255, .55);
+  }
+
+  .dir-a .da-mark {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--da-ink);
+    border-radius: 50%;
+    font: 700 12px/1 Georgia, serif;
+  }
+
+  .dir-a .da-product { font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+  .dir-a .da-status { margin-left: auto; font-size: 12px; color: var(--da-muted); }
+  .dir-a .da-dot { color: #4b7652; margin-right: 6px; }
+
+  .dir-a .da-button {
+    border: 1px solid var(--da-ink);
+    background: var(--da-ink);
+    color: #fff;
+    border-radius: 3px;
+    padding: 8px 13px;
+    font: 650 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    cursor: pointer;
+  }
+
+  .dir-a .da-header { padding: 34px 42px 28px; border-bottom: 3px double var(--da-rule); }
+  .dir-a .da-kicker { color: var(--da-accent); font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+  .dir-a h2 { max-width: 760px; margin: 10px 0 12px; font: 700 34px/1.08 Georgia, "Times New Roman", serif; letter-spacing: -.025em; }
+  .dir-a .da-deck { max-width: 780px; margin: 0; color: #565148; font-size: 14px; line-height: 1.55; }
+
+  .dir-a .da-columns-head,
+  .dir-a .da-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dir-a .da-columns-head { border-bottom: 1px solid var(--da-rule); background: var(--da-wash); }
+  .dir-a .da-col-label { padding: 12px 42px; font-size: 11px; font-weight: 750; letter-spacing: .12em; color: var(--da-muted); }
+  .dir-a .da-col-label + .da-col-label { border-left: 1px solid var(--da-rule); }
+  .dir-a .da-pair { border-bottom: 1px solid var(--da-rule); }
+  .dir-a .da-pair:last-child { border-bottom: 0; }
+
+  .dir-a .da-block {
+    min-width: 0;
+    padding: 24px 42px 26px;
+    font-size: 15px;
+    line-height: 1.76;
+  }
+
+  .dir-a .da-en { font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+  .dir-a .da-zh { border-left: 1px solid var(--da-rule); font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .dir-a .da-block p { margin: 0; }
+  .dir-a .da-num { display: block; margin-bottom: 9px; color: #9a9489; font: 650 10px/1 sans-serif; letter-spacing: .08em; }
+  .dir-a .da-term { background: #f1dfb8; padding: 1px 3px; border-radius: 2px; }
+  .dir-a .da-note { margin-top: 13px; color: var(--da-accent); font-size: 11px; font-weight: 650; }
+
+  @media (max-width: 760px) {
+    .dir-a { padding: 10px; }
+    .dir-a .da-header { padding: 26px 22px 22px; }
+    .dir-a h2 { font-size: 27px; }
+    .dir-a .da-col-label, .dir-a .da-block { padding-left: 22px; padding-right: 22px; }
+    .dir-a .da-status { display: none; }
+  }
+</style>
+
+<section class="dir-a" aria-label="英文文章翻译插件方向 A 预览">
+  <div class="da-shell">
+    <div class="da-toolbar">
+      <span class="da-mark">译</span>
+      <span class="da-product">Margin · Article Translator</span>
+      <span class="da-status"><span class="da-dot">●</span>DeepSeek 已连接 · 3 段已翻译</span>
+      <button class="da-button" type="button">重新翻译</button>
+    </div>
+
+    <header class="da-header">
+      <div class="da-kicker">Artificial Intelligence · Essay</div>
+      <h2>Why Language Models Are Becoming a New Reading Interface</h2>
+      <p class="da-deck">原网页结构被保留，中文译文固定出现在对应段落右侧。阅读视线横向移动，不需要在原文与弹窗之间来回切换。</p>
+    </header>
+
+    <div class="da-columns-head" aria-hidden="true">
+      <div class="da-col-label">ORIGINAL · ENGLISH</div>
+      <div class="da-col-label">TRANSLATION · 简体中文</div>
+    </div>
+
+    <main>
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">01</span>
+          <p>For most of the web's history, reading tools have treated text as a finished surface. A page could be saved, highlighted, or searched—but its language remained fixed.</p>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">01</span>
+          <p>在互联网历史的大部分时间里，阅读工具都把文本视为一个已经完成的界面。网页可以被保存、标注或搜索，但它所使用的语言始终固定不变。</p>
+        </div>
+      </article>
+
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">02</span>
+          <p>Large language models change that relationship. Instead of replacing the article, they can create a <span class="da-term">parallel reading layer</span> that follows the author's structure paragraph by paragraph.</p>
+          <div class="da-note">TERM · parallel reading layer</div>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">02</span>
+          <p>大语言模型改变了这种关系。它不必取代原文，而是可以创建一个<span class="da-term">平行阅读层</span>，逐段跟随作者原有的文章结构。</p>
+          <div class="da-note">术语 · 平行阅读层</div>
+        </div>
+      </article>
+
+      <article class="da-pair">
+        <div class="da-block da-en">
+          <span class="da-num">03</span>
+          <p>The useful unit is not the entire document, but the paragraph. Keeping each translation beside its source preserves context, makes errors easier to spot, and lets the reader move at their own pace.</p>
+        </div>
+        <div class="da-block da-zh">
+          <span class="da-num">03</span>
+          <p>真正有用的单位不是整篇文档，而是段落。将每段译文放在原文旁边，既能保留上下文，也更容易发现翻译错误，并让读者按自己的节奏阅读。</p>
+        </div>
+      </article>
+    </main>
+  </div>
+</section>
+</div></article>
+      <article class="option card" data-design-option="B" data-name="专业工作台"><div class="option-head"><h2>B · 专业工作台</h2><span class="tag">高密度深色工具</span></div><div class="stage"><style>
+  .dir-b {
+    --b-bg: #15191f;
+    --b-panel: #1b2028;
+    --b-panel-2: #202630;
+    --b-border: #343c48;
+    --b-border-soft: #29313b;
+    --b-text: #d8dee9;
+    --b-muted: #8993a1;
+    --b-faint: #65707e;
+    --b-blue: #6ea8d9;
+    --b-blue-bg: #223548;
+    --b-green: #75b798;
+    --b-amber: #d2a85a;
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--b-border);
+    border-radius: 10px;
+    background: var(--b-bg);
+    color: var(--b-text);
+    box-shadow: 0 18px 44px rgba(7, 10, 14, 0.28);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  .dir-b * { box-sizing: border-box; }
+
+  .dir-b .b-toolbar {
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--b-border);
+    background: #1d232b;
+  }
+
+  .dir-b .b-source {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .dir-b .b-chip,
+  .dir-b .b-action,
+  .dir-b .b-select {
+    border: 1px solid var(--b-border);
+    border-radius: 5px;
+    background: #252c36;
+    color: var(--b-text);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .dir-b .b-chip { padding: 5px 7px; color: var(--b-blue); }
+  .dir-b .b-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .dir-b .b-url { color: var(--b-muted); font-size: 10px; }
+
+  .dir-b .b-controls { display: flex; align-items: center; gap: 6px; }
+  .dir-b .b-select { padding: 7px 22px 7px 8px; appearance: none; color: #b9c2cd; }
+  .dir-b .b-action { padding: 7px 10px; cursor: default; }
+  .dir-b .b-action.primary { border-color: #527ca2; background: #2a4963; color: #e6f2fc; }
+
+  .dir-b .b-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 30px;
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--b-border-soft);
+    background: var(--b-panel);
+    color: var(--b-muted);
+    font-size: 10px;
+  }
+
+  .dir-b .b-ready { color: var(--b-green); }
+  .dir-b .b-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 5px; }
+  .dir-b .b-spacer { flex: 1; }
+
+  .dir-b .b-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dir-b .b-pane + .b-pane { border-left: 1px solid var(--b-border); }
+
+  .dir-b .b-pane-head {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 11px;
+    border-bottom: 1px solid var(--b-border);
+    background: var(--b-panel-2);
+    font-size: 10px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #abb5c1;
+  }
+
+  .dir-b .b-pane-head span:last-child { color: var(--b-faint); letter-spacing: 0; text-transform: none; }
+
+  .dir-b .b-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    min-height: 92px;
+    border-bottom: 1px solid var(--b-border-soft);
+    background: #191e25;
+  }
+
+  .dir-b .b-row:nth-child(odd) { background: #1b2027; }
+  .dir-b .b-row.active { background: #1f2a35; }
+
+  .dir-b .b-num {
+    padding: 13px 8px;
+    border-right: 1px solid var(--b-border-soft);
+    color: var(--b-faint);
+    text-align: right;
+    font-size: 10px;
+    user-select: none;
+  }
+
+  .dir-b .b-row.active .b-num { color: var(--b-blue); background: var(--b-blue-bg); }
+
+  .dir-b .b-copy {
+    padding: 11px 14px 13px;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #cad1db;
+  }
+
+  .dir-b .b-zh .b-copy {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #d9dee6;
+    letter-spacing: .01em;
+  }
+
+  .dir-b .b-term { color: #8fbadf; background: rgba(74, 118, 153, .18); padding: 1px 3px; border-radius: 3px; }
+  .dir-b .b-note { display: block; margin-top: 7px; color: var(--b-amber); font-size: 9px; font-family: ui-monospace, monospace; }
+
+  .dir-b .b-footer {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 11px;
+    background: #202731;
+    color: var(--b-muted);
+    font-size: 9px;
+  }
+
+  @media (max-width: 760px) {
+    .dir-b .b-toolbar { grid-template-columns: 1fr; }
+    .dir-b .b-controls { flex-wrap: wrap; }
+    .dir-b .b-columns { grid-template-columns: 1fr; }
+    .dir-b .b-pane + .b-pane { border-left: 0; border-top: 1px solid var(--b-border); }
+  }
+</style>
+
+<section class="dir-b" aria-label="方向 B：逐段翻译工作台">
+  <header class="b-toolbar">
+    <div class="b-source">
+      <span class="b-chip">WEB</span>
+      <div>
+        <div class="b-title">The Architecture of Reliable AI Systems</div>
+        <div class="b-url">research.example.com / engineering / reliable-ai</div>
+      </div>
+    </div>
+    <div class="b-controls">
+      <button class="b-select">DeepSeek V3 ▾</button>
+      <button class="b-action">术语 12</button>
+      <button class="b-action primary">重新翻译</button>
+    </div>
+  </header>
+
+  <div class="b-statusbar">
+    <span class="b-ready"><i class="b-dot"></i>翻译完成</span>
+    <span>8 段 · 1,284 words</span>
+    <span>耗时 14.2s</span>
+    <span class="b-spacer"></span>
+    <span>滚动同步：开启</span>
+  </div>
+
+  <div class="b-columns">
+    <article class="b-pane b-en">
+      <div class="b-pane-head"><span>English / Source</span><span>EN-US</span></div>
+      <div class="b-row">
+        <div class="b-num">01</div>
+        <div class="b-copy">Reliable AI systems are not defined by a single model benchmark. They emerge from the interaction between models, retrieval layers, validation rules, and human oversight.</div>
+      </div>
+      <div class="b-row active">
+        <div class="b-num">02</div>
+        <div class="b-copy">A production pipeline should treat model output as an untrusted proposal. <span class="b-term">Grounding</span>, schema validation, and confidence thresholds turn that proposal into a dependable result.</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">03</div>
+        <div class="b-copy">Latency also shapes user trust. Streaming the first useful sentence is often more valuable than returning a polished answer several seconds later.</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">04</div>
+        <div class="b-copy">The final design principle is observability: every response should be traceable to its prompt, context, model version, and evaluation outcome.</div>
+      </div>
+    </article>
+
+    <article class="b-pane b-zh">
+      <div class="b-pane-head"><span>中文 / LLM Translation</span><span>ZH-CN</span></div>
+      <div class="b-row">
+        <div class="b-num">01</div>
+        <div class="b-copy">可靠的 AI 系统并非由单一模型基准所定义，而是模型、检索层、验证规则与人工监督共同作用的结果。</div>
+      </div>
+      <div class="b-row active">
+        <div class="b-num">02</div>
+        <div class="b-copy">生产管线应将模型输出视为尚未可信的提案。<span class="b-term">事实依据校准</span>、模式验证与置信度阈值，能将该提案转化为可靠结果。<span class="b-note">TERM · grounding → 事实依据校准</span></div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">03</div>
+        <div class="b-copy">延迟同样会影响用户信任。与其几秒后才返回润色完整的答案，不如尽早流式呈现第一句有用的信息。</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">04</div>
+        <div class="b-copy">最后一项设计原则是可观测性：每个响应都应能追溯至其提示词、上下文、模型版本与评估结果。</div>
+      </div>
+    </article>
+  </div>
+
+  <footer class="b-footer">
+    <span>Ln 02 · 双栏段落锁定 · 本地缓存已保存</span>
+    <span class="b-spacer"></span>
+    <span>API: connected</span>
+  </footer>
+</section>
+</div></article>
+      <article class="option card" data-design-option="C" data-name="双语书页"><div class="option-head"><h2>C · 双语书页</h2><span class="tag">沉浸式对开阅读</span></div><div class="stage"><style>
+  .dir-c {
+    --c-paper: #f6f0e4;
+    --c-paper-deep: #eee4d3;
+    --c-ink: #26221d;
+    --c-muted: #7b7062;
+    --c-rule: rgba(72, 58, 43, 0.14);
+    --c-accent: #9a4f32;
+    box-sizing: border-box;
+    min-height: 720px;
+    padding: 38px;
+    color: var(--c-ink);
+    background: #c7b79f;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  .dir-c *,
+  .dir-c *::before,
+  .dir-c *::after {
+    box-sizing: inherit;
+  }
+
+  .dir-c .c-browser {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid rgba(55, 42, 29, 0.22);
+    border-radius: 14px;
+    background: #eee7dc;
+    box-shadow: 0 24px 70px rgba(53, 39, 24, 0.22);
+  }
+
+  .dir-c .c-browserbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-bottom: 1px solid rgba(55, 42, 29, 0.12);
+    color: var(--c-muted);
+    font-size: 12px;
+  }
+
+  .dir-c .c-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dir-c .c-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #b6a58d;
+  }
+
+  .dir-c .c-address {
+    flex: 1;
+    max-width: 520px;
+    padding: 7px 13px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.42);
+    text-align: center;
+  }
+
+  .dir-c .c-spread {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 630px;
+    background: var(--c-paper);
+  }
+
+  .dir-c .c-spread::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    z-index: 2;
+    width: 34px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(65, 48, 30, 0), rgba(65, 48, 30, 0.11) 46%, rgba(255, 251, 242, 0.45) 54%, rgba(65, 48, 30, 0));
+  }
+
+  .dir-c .c-page {
+    position: relative;
+    padding: 58px 58px 74px;
+    background: linear-gradient(90deg, var(--c-paper) 0%, #faf5eb 86%, var(--c-paper-deep) 100%);
+  }
+
+  .dir-c .c-page-right {
+    background: linear-gradient(90deg, var(--c-paper-deep) 0%, #faf5eb 14%, var(--c-paper) 100%);
+  }
+
+  .dir-c .c-kicker {
+    margin: 0 0 14px;
+    color: var(--c-accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .dir-c .c-title {
+    max-width: 410px;
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(29px, 3.2vw, 43px);
+    font-weight: 500;
+    line-height: 1.07;
+    letter-spacing: -0.025em;
+  }
+
+  .dir-c .c-page-right .c-title {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", system-ui, sans-serif;
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 600;
+    line-height: 1.24;
+    letter-spacing: 0;
+  }
+
+  .dir-c .c-meta {
+    margin: 22px 0 36px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--c-rule);
+    color: var(--c-muted);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .dir-c .c-copy {
+    max-width: 39em;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.78;
+  }
+
+  .dir-c .c-page-right .c-copy {
+    font-family: "Songti SC", "STSong", "SimSun", "PingFang SC", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.92;
+  }
+
+  .dir-c .c-copy p {
+    margin: 0 0 22px;
+  }
+
+  .dir-c .c-footer {
+    position: absolute;
+    right: 58px;
+    bottom: 28px;
+    left: 58px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--c-muted);
+    font-size: 11px;
+  }
+
+  .dir-c .c-status {
+    color: #6e684e;
+  }
+
+  @media (max-width: 760px) {
+    .dir-c {
+      padding: 16px;
+    }
+
+    .dir-c .c-spread {
+      grid-template-columns: 1fr;
+    }
+
+    .dir-c .c-spread::before {
+      display: none;
+    }
+
+    .dir-c .c-page {
+      padding: 42px 34px 66px;
+      background: var(--c-paper);
+    }
+
+    .dir-c .c-page + .c-page {
+      border-top: 1px solid var(--c-rule);
+    }
+
+    .dir-c .c-footer {
+      right: 34px;
+      left: 34px;
+    }
+  }
+</style>
+
+<section class="dir-c" aria-label="方向 C：双语书籍对开阅读">
+  <div class="c-browser">
+    <div class="c-browserbar">
+      <div class="c-dots" aria-hidden="true">
+        <span class="c-dot"></span><span class="c-dot"></span><span class="c-dot"></span>
+      </div>
+      <div class="c-address">theatlantic.com / technology / the-shape-of-attention</div>
+      <span>译读</span>
+    </div>
+
+    <main class="c-spread">
+      <article class="c-page" lang="en">
+        <p class="c-kicker">Technology · Essay</p>
+        <h2 class="c-title">The Shape of Attention in an Age of Machines</h2>
+        <p class="c-meta">By Eleanor Hart · 8 min read</p>
+        <div class="c-copy">
+          <p>Every new tool changes not only what we can do, but what we notice. The clock taught workers to divide the day; the camera taught travelers to frame the world.</p>
+          <p>Artificial intelligence is beginning to make a similar demand on attention. Its answers arrive quickly, yet the value of those answers still depends on the patience of the person asking.</p>
+          <p>The question is no longer whether machines can produce language. It is whether we can remain careful readers of what they produce.</p>
+        </div>
+        <div class="c-footer"><span>Original</span><span>12</span></div>
+      </article>
+
+      <article class="c-page c-page-right" lang="zh-CN">
+        <p class="c-kicker">技术 · 随笔</p>
+        <h2 class="c-title">机器时代，注意力将呈现怎样的形态</h2>
+        <p class="c-meta">埃莉诺·哈特 著 · AI 翻译</p>
+        <div class="c-copy">
+          <p>每一种新工具，不仅改变我们能做什么，也改变我们会注意什么。时钟教会劳动者划分一天，照相机教会旅行者框取世界。</p>
+          <p>人工智能也开始对注意力提出类似要求。它的回答来得很快，但回答是否有价值，仍取决于提问者是否愿意耐心思考。</p>
+          <p>问题已不再是机器能否生成语言，而是面对它生成的内容，我们能否继续做审慎的读者。</p>
+        </div>
+        <div class="c-footer"><span class="c-status">已完成翻译</span><span>13</span></div>
+      </article>
+    </main>
+  </div>
+</section>
+</div></article>
+      <article class="option card" data-design-option="D" data-name="术语工作台"><div class="option-head"><h2>D · 术语工作台</h2><span><span class="recommended">推荐</span> <span class="tag">翻译与术语并行</span></span></div><div class="stage"><style>
+  .dir-d{height:100%;min-height:320px;background:#f3f5f2;color:#17211d;font-family:"Aptos","Segoe UI",sans-serif;display:grid;grid-template-rows:auto 1fr;border-radius:12px;overflow:hidden}
+  .dir-d *{box-sizing:border-box}.dir-d .dbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#e7ebe7;border-bottom:1px solid #cbd3cd;font-size:11px;font-weight:600}.dir-d .brand{display:flex;align-items:center;gap:7px}.dir-d .mark{width:17px;height:17px;display:grid;place-items:center;background:#315c49;color:#fff;border-radius:5px;font-family:ui-monospace,monospace}.dir-d .dtools{display:flex;gap:6px}.dir-d button{border:1px solid #bcc7bf;background:#f8faf8;border-radius:6px;padding:5px 8px;color:#293c33;font:inherit}.dir-d .workspace{display:grid;grid-template-columns:132px 1fr;background:#f9faf8;min-height:0}.dir-d .rail{padding:14px 10px;background:#eef1ed;border-right:1px solid #d6ddd7}.dir-d .rail h4{margin:0 0 10px;font-size:10px;color:#6a786f;text-transform:uppercase;letter-spacing:.08em}.dir-d .rail a{display:block;padding:7px 8px;margin:3px 0;border-radius:6px;font-size:11px;color:#526159}.dir-d .rail a.active{background:#dce8e0;border:1px solid #c2d5c8;color:#254837;font-weight:600}.dir-d .doc{padding:16px 18px;overflow:hidden}.dir-d .title{display:flex;justify-content:space-between;align-items:end;margin-bottom:13px}.dir-d h3{margin:0;font-family:"Aptos Display","Segoe UI",sans-serif;font-size:18px;letter-spacing:-.02em}.dir-d .status{font:10px ui-monospace,monospace;color:#527261}.dir-d .pair{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid #dce2dd}.dir-d .num{font:9px ui-monospace,monospace;color:#8a968f;padding-top:2px}.dir-d p{margin:0;font-size:11px;line-height:1.52}.dir-d .zh{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#294b3b}.dir-d em{font-style:normal;background:#dce8e0;border-radius:3px;padding:1px 2px;color:#173f2c}.dir-d .term{display:inline-flex;margin-top:8px;padding:4px 7px;border:1px solid #c4d4c9;border-radius:999px;background:#f2f7f3;color:#315c49;font:9px ui-monospace,monospace}
+  @media(max-width:620px){.dir-d .workspace{grid-template-columns:1fr}.dir-d .rail{display:none}.dir-d .pair{grid-template-columns:20px 1fr}.dir-d .pair .zh{grid-column:2}.dir-d{min-height:390px}}
+</style>
+<div class="dir-d">
+  <div class="dbar"><div class="brand"><span class="mark">译</span>术语工作台</div><div class="dtools"><button>术语 12</button><button>重新翻译</button></div></div>
+  <div class="workspace">
+    <nav class="rail"><h4>文章结构</h4><a class="active">Why agents matter</a><a>Tool use</a><a>Memory systems</a><a>Evaluation</a></nav>
+    <main class="doc">
+      <div class="title"><h3>Building reliable AI agents</h3><span class="status">8 / 12 段已翻译</span></div>
+      <div class="pair"><span class="num">01</span><p>An agent combines a language model with tools, memory, and a control loop.</p><p class="zh">智能体将语言模型与工具、记忆和控制循环结合起来。</p></div>
+      <div class="pair"><span class="num">02</span><p>Reliable systems need explicit <em>grounding</em> and observable traces.</p><p class="zh">可靠系统需要明确的<em>事实依据</em>和可观察的运行轨迹。</p></div>
+      <div class="pair"><span class="num">03</span><p>Evaluation should measure the whole trajectory, not only the final answer.</p><p class="zh">评估应覆盖完整执行轨迹，而不只检查最终答案。</p></div>
+      <span class="term">grounding → 事实依据 · 已锁定</span>
+    </main>
+  </div>
+</div>
+</div></article>
+    </section>
+    <section class="details"><h2>方向说明</h2><div class="detail-grid"><div><h3>A · 编辑对照</h3><p>最接近传统文章，段落映射最直观；长文阅读舒适，但工具能力较弱。</p></div><div><h3>B · 专业工作台</h3><p>状态和段落编号最清楚；效率高，但暗色界面不适合所有长时间阅读场景。</p></div><div><h3>C · 双语书页</h3><p>阅读氛围最好；版式优雅，但对小屏幕和极长段落适应性较弱。</p></div><div><h3>D · 术语工作台</h3><p class="why">推荐：保留逐段对照，同时让术语锁定成为明确的产品差异。</p></div></div></section>
+  </main>
+  <script>for(const id of ['variance','motion','density']){const el=document.getElementById(id),out=document.getElementById(id+'Value');el.addEventListener('input',()=>out.value=el.value)}</script>
+</body>
+</html>
+

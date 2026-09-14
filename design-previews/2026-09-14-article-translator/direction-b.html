@@ -1,0 +1,233 @@
+<style>
+  .dir-b {
+    --b-bg: #15191f;
+    --b-panel: #1b2028;
+    --b-panel-2: #202630;
+    --b-border: #343c48;
+    --b-border-soft: #29313b;
+    --b-text: #d8dee9;
+    --b-muted: #8993a1;
+    --b-faint: #65707e;
+    --b-blue: #6ea8d9;
+    --b-blue-bg: #223548;
+    --b-green: #75b798;
+    --b-amber: #d2a85a;
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--b-border);
+    border-radius: 10px;
+    background: var(--b-bg);
+    color: var(--b-text);
+    box-shadow: 0 18px 44px rgba(7, 10, 14, 0.28);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  .dir-b * { box-sizing: border-box; }
+
+  .dir-b .b-toolbar {
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--b-border);
+    background: #1d232b;
+  }
+
+  .dir-b .b-source {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .dir-b .b-chip,
+  .dir-b .b-action,
+  .dir-b .b-select {
+    border: 1px solid var(--b-border);
+    border-radius: 5px;
+    background: #252c36;
+    color: var(--b-text);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .dir-b .b-chip { padding: 5px 7px; color: var(--b-blue); }
+  .dir-b .b-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .dir-b .b-url { color: var(--b-muted); font-size: 10px; }
+
+  .dir-b .b-controls { display: flex; align-items: center; gap: 6px; }
+  .dir-b .b-select { padding: 7px 22px 7px 8px; appearance: none; color: #b9c2cd; }
+  .dir-b .b-action { padding: 7px 10px; cursor: default; }
+  .dir-b .b-action.primary { border-color: #527ca2; background: #2a4963; color: #e6f2fc; }
+
+  .dir-b .b-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 30px;
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--b-border-soft);
+    background: var(--b-panel);
+    color: var(--b-muted);
+    font-size: 10px;
+  }
+
+  .dir-b .b-ready { color: var(--b-green); }
+  .dir-b .b-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 5px; }
+  .dir-b .b-spacer { flex: 1; }
+
+  .dir-b .b-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .dir-b .b-pane + .b-pane { border-left: 1px solid var(--b-border); }
+
+  .dir-b .b-pane-head {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 11px;
+    border-bottom: 1px solid var(--b-border);
+    background: var(--b-panel-2);
+    font-size: 10px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #abb5c1;
+  }
+
+  .dir-b .b-pane-head span:last-child { color: var(--b-faint); letter-spacing: 0; text-transform: none; }
+
+  .dir-b .b-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    min-height: 92px;
+    border-bottom: 1px solid var(--b-border-soft);
+    background: #191e25;
+  }
+
+  .dir-b .b-row:nth-child(odd) { background: #1b2027; }
+  .dir-b .b-row.active { background: #1f2a35; }
+
+  .dir-b .b-num {
+    padding: 13px 8px;
+    border-right: 1px solid var(--b-border-soft);
+    color: var(--b-faint);
+    text-align: right;
+    font-size: 10px;
+    user-select: none;
+  }
+
+  .dir-b .b-row.active .b-num { color: var(--b-blue); background: var(--b-blue-bg); }
+
+  .dir-b .b-copy {
+    padding: 11px 14px 13px;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #cad1db;
+  }
+
+  .dir-b .b-zh .b-copy {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #d9dee6;
+    letter-spacing: .01em;
+  }
+
+  .dir-b .b-term { color: #8fbadf; background: rgba(74, 118, 153, .18); padding: 1px 3px; border-radius: 3px; }
+  .dir-b .b-note { display: block; margin-top: 7px; color: var(--b-amber); font-size: 9px; font-family: ui-monospace, monospace; }
+
+  .dir-b .b-footer {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 11px;
+    background: #202731;
+    color: var(--b-muted);
+    font-size: 9px;
+  }
+
+  @media (max-width: 760px) {
+    .dir-b .b-toolbar { grid-template-columns: 1fr; }
+    .dir-b .b-controls { flex-wrap: wrap; }
+    .dir-b .b-columns { grid-template-columns: 1fr; }
+    .dir-b .b-pane + .b-pane { border-left: 0; border-top: 1px solid var(--b-border); }
+  }
+</style>
+
+<section class="dir-b" aria-label="方向 B：逐段翻译工作台">
+  <header class="b-toolbar">
+    <div class="b-source">
+      <span class="b-chip">WEB</span>
+      <div>
+        <div class="b-title">The Architecture of Reliable AI Systems</div>
+        <div class="b-url">research.example.com / engineering / reliable-ai</div>
+      </div>
+    </div>
+    <div class="b-controls">
+      <button class="b-select">DeepSeek V3 ▾</button>
+      <button class="b-action">术语 12</button>
+      <button class="b-action primary">重新翻译</button>
+    </div>
+  </header>
+
+  <div class="b-statusbar">
+    <span class="b-ready"><i class="b-dot"></i>翻译完成</span>
+    <span>8 段 · 1,284 words</span>
+    <span>耗时 14.2s</span>
+    <span class="b-spacer"></span>
+    <span>滚动同步：开启</span>
+  </div>
+
+  <div class="b-columns">
+    <article class="b-pane b-en">
+      <div class="b-pane-head"><span>English / Source</span><span>EN-US</span></div>
+      <div class="b-row">
+        <div class="b-num">01</div>
+        <div class="b-copy">Reliable AI systems are not defined by a single model benchmark. They emerge from the interaction between models, retrieval layers, validation rules, and human oversight.</div>
+      </div>
+      <div class="b-row active">
+        <div class="b-num">02</div>
+        <div class="b-copy">A production pipeline should treat model output as an untrusted proposal. <span class="b-term">Grounding</span>, schema validation, and confidence thresholds turn that proposal into a dependable result.</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">03</div>
+        <div class="b-copy">Latency also shapes user trust. Streaming the first useful sentence is often more valuable than returning a polished answer several seconds later.</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">04</div>
+        <div class="b-copy">The final design principle is observability: every response should be traceable to its prompt, context, model version, and evaluation outcome.</div>
+      </div>
+    </article>
+
+    <article class="b-pane b-zh">
+      <div class="b-pane-head"><span>中文 / LLM Translation</span><span>ZH-CN</span></div>
+      <div class="b-row">
+        <div class="b-num">01</div>
+        <div class="b-copy">可靠的 AI 系统并非由单一模型基准所定义，而是模型、检索层、验证规则与人工监督共同作用的结果。</div>
+      </div>
+      <div class="b-row active">
+        <div class="b-num">02</div>
+        <div class="b-copy">生产管线应将模型输出视为尚未可信的提案。<span class="b-term">事实依据校准</span>、模式验证与置信度阈值，能将该提案转化为可靠结果。<span class="b-note">TERM · grounding → 事实依据校准</span></div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">03</div>
+        <div class="b-copy">延迟同样会影响用户信任。与其几秒后才返回润色完整的答案，不如尽早流式呈现第一句有用的信息。</div>
+      </div>
+      <div class="b-row">
+        <div class="b-num">04</div>
+        <div class="b-copy">最后一项设计原则是可观测性：每个响应都应能追溯至其提示词、上下文、模型版本与评估结果。</div>
+      </div>
+    </article>
+  </div>
+
+  <footer class="b-footer">
+    <span>Ln 02 · 双栏段落锁定 · 本地缓存已保存</span>
+    <span class="b-spacer"></span>
+    <span>API: connected</span>
+  </footer>
+</section>

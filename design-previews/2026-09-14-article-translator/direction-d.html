@@ -1,0 +1,18 @@
+<style>
+  .dir-d{height:100%;min-height:320px;background:#f3f5f2;color:#17211d;font-family:"Aptos","Segoe UI",sans-serif;display:grid;grid-template-rows:auto 1fr;border-radius:12px;overflow:hidden}
+  .dir-d *{box-sizing:border-box}.dir-d .dbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#e7ebe7;border-bottom:1px solid #cbd3cd;font-size:11px;font-weight:600}.dir-d .brand{display:flex;align-items:center;gap:7px}.dir-d .mark{width:17px;height:17px;display:grid;place-items:center;background:#315c49;color:#fff;border-radius:5px;font-family:ui-monospace,monospace}.dir-d .dtools{display:flex;gap:6px}.dir-d button{border:1px solid #bcc7bf;background:#f8faf8;border-radius:6px;padding:5px 8px;color:#293c33;font:inherit}.dir-d .workspace{display:grid;grid-template-columns:132px 1fr;background:#f9faf8;min-height:0}.dir-d .rail{padding:14px 10px;background:#eef1ed;border-right:1px solid #d6ddd7}.dir-d .rail h4{margin:0 0 10px;font-size:10px;color:#6a786f;text-transform:uppercase;letter-spacing:.08em}.dir-d .rail a{display:block;padding:7px 8px;margin:3px 0;border-radius:6px;font-size:11px;color:#526159}.dir-d .rail a.active{background:#dce8e0;border:1px solid #c2d5c8;color:#254837;font-weight:600}.dir-d .doc{padding:16px 18px;overflow:hidden}.dir-d .title{display:flex;justify-content:space-between;align-items:end;margin-bottom:13px}.dir-d h3{margin:0;font-family:"Aptos Display","Segoe UI",sans-serif;font-size:18px;letter-spacing:-.02em}.dir-d .status{font:10px ui-monospace,monospace;color:#527261}.dir-d .pair{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid #dce2dd}.dir-d .num{font:9px ui-monospace,monospace;color:#8a968f;padding-top:2px}.dir-d p{margin:0;font-size:11px;line-height:1.52}.dir-d .zh{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#294b3b}.dir-d em{font-style:normal;background:#dce8e0;border-radius:3px;padding:1px 2px;color:#173f2c}.dir-d .term{display:inline-flex;margin-top:8px;padding:4px 7px;border:1px solid #c4d4c9;border-radius:999px;background:#f2f7f3;color:#315c49;font:9px ui-monospace,monospace}
+  @media(max-width:620px){.dir-d .workspace{grid-template-columns:1fr}.dir-d .rail{display:none}.dir-d .pair{grid-template-columns:20px 1fr}.dir-d .pair .zh{grid-column:2}.dir-d{min-height:390px}}
+</style>
+<div class="dir-d">
+  <div class="dbar"><div class="brand"><span class="mark">译</span>术语工作台</div><div class="dtools"><button>术语 12</button><button>重新翻译</button></div></div>
+  <div class="workspace">
+    <nav class="rail"><h4>文章结构</h4><a class="active">Why agents matter</a><a>Tool use</a><a>Memory systems</a><a>Evaluation</a></nav>
+    <main class="doc">
+      <div class="title"><h3>Building reliable AI agents</h3><span class="status">8 / 12 段已翻译</span></div>
+      <div class="pair"><span class="num">01</span><p>An agent combines a language model with tools, memory, and a control loop.</p><p class="zh">智能体将语言模型与工具、记忆和控制循环结合起来。</p></div>
+      <div class="pair"><span class="num">02</span><p>Reliable systems need explicit <em>grounding</em> and observable traces.</p><p class="zh">可靠系统需要明确的<em>事实依据</em>和可观察的运行轨迹。</p></div>
+      <div class="pair"><span class="num">03</span><p>Evaluation should measure the whole trajectory, not only the final answer.</p><p class="zh">评估应覆盖完整执行轨迹，而不只检查最终答案。</p></div>
+      <span class="term">grounding → 事实依据 · 已锁定</span>
+    </main>
+  </div>
+</div>
