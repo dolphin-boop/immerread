@@ -14,10 +14,12 @@ test("renders paired English and Chinese article content", () => {
 });
 
 test("exposes the core demo interactions accessibly", () => {
-  assert.match(html, /aria-label="阅读模式"/);
+  assert.match(html, /aria-label="阅读功能"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /prefers-reduced-motion/);
+  assert.doesNotMatch(html, />仅中文</);
+  assert.doesNotMatch(html, />重新翻译</);
 });
 
 test("keeps prohibited visual patterns out of the interface", () => {

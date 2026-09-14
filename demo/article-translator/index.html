@@ -17,8 +17,7 @@
       <div class="browserbar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="address">anthropic.com / research / building-effective-agents</div><span></span><div class="brand"><span class="brand-mark">译</span>译读</div></div>
       <div class="toolbar">
         <div class="toolbar-title"><strong>Building effective agents</strong><span>检测到英文文章 · 1,842 words</span></div>
-        <div class="mode" role="group" aria-label="阅读模式"><button type="button" data-mode="bilingual" aria-pressed="true">双语对照</button><button type="button" data-mode="chinese" aria-pressed="false">仅中文</button></div>
-        <button class="translate" type="button" id="translateButton">重新翻译</button>
+        <div class="mode" role="navigation" aria-label="阅读功能"><span aria-current="page">双语对照</span></div>
       </div>
       <div class="progress" aria-hidden="true"><span id="progress"></span></div>
       <article class="book" id="article">
@@ -34,11 +33,5 @@
       <footer class="statusbar" aria-live="polite"><i class="status-dot"></i><span id="status">术语一致性 · 3 项已锁定</span></footer>
     </section>
   </main>
-  <script>
-    const root=document.querySelector('.browser'),button=document.getElementById('translateButton'),status=document.getElementById('status'),progress=document.getElementById('progress');
-    button.addEventListener('click',()=>{button.disabled=true;button.textContent='翻译中…';status.textContent='正在按段落翻译…';root.classList.add('translating');progress.style.transform='scaleX(.18)';setTimeout(()=>{progress.style.transform='scaleX(.72)'},260);setTimeout(()=>{root.classList.remove('translating');progress.style.transform='scaleX(1)';button.disabled=false;button.textContent='重新翻译';status.textContent='翻译完成 · 术语一致性检查已通过'},760)});
-    document.querySelectorAll('[data-mode]').forEach(control=>control.addEventListener('click',()=>{document.querySelectorAll('[data-mode]').forEach(item=>item.setAttribute('aria-pressed',String(item===control)));root.classList.toggle('chinese-only',control.dataset.mode==='chinese')}));
-    const termButton=document.querySelector('.term-button'),popover=document.querySelector('.term-pop');termButton.addEventListener('click',()=>{const open=!popover.classList.contains('open');popover.classList.toggle('open',open);termButton.setAttribute('aria-expanded',String(open))});
-  </script>
 </body>
 </html>
