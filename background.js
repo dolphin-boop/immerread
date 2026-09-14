@@ -5,11 +5,17 @@ import {
 } from "./lib/translation.js";
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+  if (!tab.id || !tab.url || !/^https?:/i.test(tab.url)) return;
   try {
     await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
   } catch {
-    // Chrome 内部页面等不允许内容脚本运行。
+    try {
+      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
+    } catch {
+      // Chrome 内部页面等不允许内容脚本运行。
+    }
   }
 });
 

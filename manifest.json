@@ -3,7 +3,7 @@
   "name": "译读",
   "version": "0.1.0",
   "description": "使用 LLM 将英文网页文章翻译为逐段对照的中文阅读页。",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": ["https://api.deepseek.com/*"],
   "background": {
     "service_worker": "background.js",

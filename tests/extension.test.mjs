@@ -13,10 +13,16 @@ test("configures a local Manifest V3 Chrome extension", () => {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.background.service_worker, "background.js");
   assert.equal(manifest.options_page, "options.html");
-  assert.deepEqual(manifest.permissions, ["storage"]);
+  assert.deepEqual(manifest.permissions, ["storage", "scripting", "activeTab"]);
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
 });
 
+test("injects the reader when the current tab predates extension loading", async () => {
+  const background = await readFile(new URL("background.js", root), "utf8");
+  assert.match(background, /chrome\.scripting\.insertCSS/);
+  assert.match(background, /chrome\.scripting\.executeScript/);
+  assert.equal((background.match(/YIDU_START/g) ?? []).length, 2);
+});
 test("keeps the MVP reader focused on bilingual comparison", () => {
   assert.match(content, />双语对照</);
   assert.doesNotMatch(content, /仅中文|重新翻译/);
