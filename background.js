@@ -11,20 +11,7 @@ import {
 
 let cacheWriteChain = Promise.resolve();
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id || !tab.url || !/^https?:/i.test(tab.url)) return;
-  try {
-    await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
-  } catch {
-    try {
-      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-      await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
-    } catch {
-      // Chrome 内部页面等不允许内容脚本运行。
-    }
-  }
-});
+void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "YIDU_OPEN_OPTIONS") {
@@ -34,15 +21,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   const handlers = {
+    YIDU_PREPARE_TAB: prepareTab,
     YIDU_TRANSLATE_BATCH: translateBatch,
     YIDU_CACHE_GET: getCachedTranslations,
     YIDU_CACHE_PUT: putCachedTranslations
   };
   const handler = handlers[message?.type];
   if (!handler) return false;
-  handler(message.payload).then(sendResponse);
+  Promise.resolve(handler(message.payload)).then(sendResponse);
   return true;
 });
+
+async function prepareTab(payload) {
+  try {
+    const tabId = Number(payload?.tabId);
+    const tab = await chrome.tabs.get(tabId);
+    if (!Number.isInteger(tabId) || !/^https?:/i.test(tab.url || "")) {
+      return { ok: false, message: "当前页面不支持文章翻译。" };
+    }
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "无法读取当前页面，请刷新页面后重试。" };
+  }
+}
 
 async function getModel() {
   const settings = await chrome.storage.local.get("deepseekModel");
@@ -84,7 +86,7 @@ async function translateBatch(payload) {
 
     const segments = Array.isArray(payload?.segments) ? payload.segments : [];
     if (!segments.length) {
-      return { ok: false, code: "EMPTY_BATCH", message: "没有可翻译的文章段落。" };
+      return { ok: false, code: "EMPTY_BATCH", message: "没有可翻译的文章内容。" };
     }
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {

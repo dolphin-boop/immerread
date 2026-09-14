@@ -6,28 +6,30 @@ import {
   parseTranslationResponse
 } from "../lib/translation.js";
 
-test("builds a terminology-aware translation prompt", () => {
+test("builds a rich-text terminology-aware translation prompt", () => {
   const messages = buildTranslationMessages({
     title: "Building agents",
-    segments: [{ id: "1", text: "An agent uses tools." }],
+    segments: [{ id: "1", kind: "paragraph", text: "An agent uses tools.", markup: "An <strong>agent</strong> uses tools." }],
     glossary: { agent: "智能体" }
   });
   assert.equal(messages.length, 2);
   assert.match(messages[0].content, /agent => 智能体/);
-  assert.match(messages[0].content, /只返回 JSON/);
+  assert.match(messages[0].content, /原样保留这些标记/);
+  assert.match(messages[0].content, /不得新增其他 HTML/);
   assert.match(messages[0].content, /只收录 AI 和机器学习领域/);
   assert.match(messages[0].content, /不要把通用编程/);
-  assert.doesNotMatch(messages[0].content, /软件工程专有名词/);
+  const payload = JSON.parse(messages[1].content);
+  assert.equal(payload.segments[0].markup, "An <strong>agent</strong> uses tools.");
 });
 
-test("parses fenced JSON and keeps paragraph ids", () => {
+test("parses fenced JSON and keeps paragraph ids and markup", () => {
   const result = parseTranslationResponse(
-    '```json\n{"items":[{"id":"1","translation":"智能体使用工具。","terms":[{"source":"agent","target":"智能体"}]}]}\n```',
+    '```json\n{"items":[{"id":"1","translation":"<strong>智能体</strong>使用工具。","terms":[{"source":"agent","target":"智能体"}]}]}\n```',
     ["1"]
   );
   assert.deepEqual(result, [{
     id: "1",
-    translation: "智能体使用工具。",
+    translation: "<strong>智能体</strong>使用工具。",
     terms: [{ source: "agent", target: "智能体" }]
   }]);
 });

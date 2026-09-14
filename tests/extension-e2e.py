@@ -1,5 +1,6 @@
 import functools
 import os
+import re
 import tempfile
 import threading
 import time
@@ -24,18 +25,6 @@ fixture_url = f"http://127.0.0.1:{server.server_port}/tests/fixtures/long-articl
 test_url = os.environ.get("YIDU_TEST_URL", fixture_url)
 is_fixture = test_url == fixture_url
 
-trigger_reader = """async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new Error("Test tab was not found");
-  try {
-    await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
-  } catch {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-    await chrome.tabs.sendMessage(tab.id, { type: "YIDU_START" });
-  }
-}"""
-
 try:
     with sync_playwright() as playwright:
         with tempfile.TemporaryDirectory(prefix="yidu-e2e-", ignore_cleanup_errors=True) as profile:
@@ -50,8 +39,8 @@ try:
                 ],
             )
             try:
-                page = context.pages[0] if context.pages else context.new_page()
-                page.goto(test_url, wait_until="domcontentloaded")
+                article_page = context.pages[0] if context.pages else context.new_page()
+                article_page.goto(test_url, wait_until="domcontentloaded")
 
                 deadline = time.monotonic() + 10
                 worker = next((item for item in context.service_workers if item.url.endswith("/background.js")), None)
@@ -68,59 +57,82 @@ try:
                         globalThis.__yiduFetchCalls += 1;
                         const request = JSON.parse(options.body);
                         const input = JSON.parse(request.messages[1].content);
-                        const items = input.segments.map((segment) => ({
-                          id: segment.id,
-                          translation: `译文：${segment.text}`,
-                          terms: segment.text.includes("AI agent")
-                            ? [{ source: "AI agent", target: "AI 智能体" }]
-                            : []
-                        }));
+                        const items = input.segments.map((segment) => {
+                          const markup = String(segment.markup || segment.text)
+                            .replaceAll("AI agent", "AI 智能体")
+                            .replaceAll("Evaluation", "评测")
+                            .replaceAll("evaluation", "评测");
+                          return {
+                            id: segment.id,
+                            translation: `译文：${markup}`,
+                            terms: String(segment.text).includes("AI agent")
+                              ? [{ source: "AI agent", target: "AI 智能体" }]
+                              : []
+                          };
+                        });
                         return new Response(JSON.stringify({
                           choices: [{ message: { content: JSON.stringify({ items }) } }]
                         }), { status: 200, headers: { "Content-Type": "application/json" } });
                       };
                     }"""
                 )
-                page.reload(wait_until="domcontentloaded")
-                worker.evaluate(trigger_reader)
 
-                reader = page.locator("#yidu-article-reader")
-                reader.wait_for(state="visible", timeout=10_000)
-                row_count = page.locator(".yidu-pair").count()
-                assert row_count == 90 if is_fixture else row_count > 64
-                page.wait_for_function(
-                    "document.querySelectorAll('.yidu-pair[data-translated=\"true\"]').length >= 3"
+                extension_match = re.match(r"(chrome-extension://[^/]+)", worker.url)
+                assert extension_match, "无法确定扩展地址"
+                panel = context.new_page()
+                panel.set_viewport_size({"width": 420, "height": 720})
+                panel.goto(f"{extension_match.group(1)}/sidepanel.html", wait_until="domcontentloaded")
+
+                panel.locator(".yidu-segment").first.wait_for(state="visible", timeout=10_000)
+                row_count = panel.locator(".yidu-segment").count()
+                assert row_count == 96 if is_fixture else row_count > 64
+                panel.wait_for_function(
+                    "document.querySelectorAll('.yidu-segment[data-translated=\"true\"]').length >= 4"
                 )
-                initial_translated = page.locator('.yidu-pair[data-translated="true"]').count()
+                initial_translated = panel.locator('.yidu-segment[data-translated="true"]').count()
                 assert initial_translated < row_count, "首屏不应立即翻译整篇文章"
+                assert panel.locator("h1.yidu-h1").get_attribute("data-translated") == "true"
 
-                toggle = reader.get_by_role("switch", name="专有名词高亮")
-                assert toggle.get_attribute("aria-checked") == "false"
-                toggle.click()
-                assert toggle.get_attribute("aria-checked") == "true"
-                toggle.click()
+                toggle = panel.get_by_role("switch", name="AI 术语高亮")
                 assert toggle.get_attribute("aria-checked") == "false"
 
-                reader.evaluate("element => { element.scrollTop = element.scrollHeight; }")
-                page.locator(".yidu-pair").last.wait_for(state="visible")
-                page.wait_for_function(
-                    "document.querySelector('.yidu-pair:last-child')?.dataset.translated === 'true'"
+                if is_fixture:
+                    rich = panel.locator('[data-segment-id="s3"]')
+                    rich.locator("strong").wait_for(state="visible")
+                    assert rich.locator("u").count() == 1
+                    assert rich.locator("a").get_attribute("href") == "https://example.com/reference"
+                    assert rich.locator("code").inner_text() == "model_id"
+                    assert panel.locator("blockquote.yidu-blockquote").count() == 1
+                    assert panel.locator("ul.yidu-list li").count() == 2
+                    toggle.click()
+                    assert toggle.get_attribute("aria-checked") == "true"
+                    assert rich.locator("mark.yidu-term").count() == 1
+                    toggle.click()
+                    assert toggle.get_attribute("aria-checked") == "false"
+
+                screenshot_path = os.environ.get("YIDU_SCREENSHOT_PATH")
+                if screenshot_path:
+                    panel.screenshot(path=screenshot_path, full_page=False)
+
+                panel.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+                panel.locator(".yidu-segment").last.scroll_into_view_if_needed()
+                panel.wait_for_function(
+                    "document.querySelector('.yidu-segment:last-child')?.dataset.translated === 'true'"
                 )
                 time.sleep(0.3)
-                calls_before_reopen = worker.evaluate("globalThis.__yiduFetchCalls")
-                assert calls_before_reopen >= 2
+                calls_before_reload = worker.evaluate("globalThis.__yiduFetchCalls")
+                assert calls_before_reload >= 2
 
-                worker.evaluate(trigger_reader)
-                reader.wait_for(state="detached")
-                worker.evaluate(trigger_reader)
-                reader.wait_for(state="visible")
-                page.wait_for_function(
-                    f"document.querySelectorAll('.yidu-pair[data-translated=\"true\"]').length >= {initial_translated}"
+                panel.reload(wait_until="domcontentloaded")
+                panel.locator(".yidu-segment").first.wait_for(state="visible", timeout=10_000)
+                panel.wait_for_function(
+                    f"document.querySelectorAll('.yidu-segment[data-translated=\"true\"]').length >= {initial_translated}"
                 )
                 time.sleep(0.5)
-                assert worker.evaluate("globalThis.__yiduFetchCalls") == calls_before_reopen
-                assert "缓存" in reader.locator(".yidu-progress").inner_text()
-                print(f"PASS: {row_count} rows, viewport translation, toggle, and cache restore")
+                assert worker.evaluate("globalThis.__yiduFetchCalls") == calls_before_reload
+                assert panel.locator("#yidu-article-reader").count() == 0
+                assert article_page.locator("#yidu-article-reader").count() == 0
+                print(f"PASS: {row_count} semantic blocks, side panel translation, formatting, and cache restore")
             finally:
                 context.close()
 finally:

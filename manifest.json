@@ -1,23 +1,26 @@
 {
   "manifest_version": 3,
   "name": "译读",
-  "version": "0.2.0",
-  "description": "使用 LLM 将英文网页文章翻译为逐段对照的中文阅读页。",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "version": "0.3.0",
+  "minimum_chrome_version": "114",
+  "description": "在 Chrome 右侧边栏中使用 LLM 翻译英文网页文章。",
+  "permissions": ["storage", "scripting", "activeTab", "sidePanel", "tabs"],
   "host_permissions": ["https://api.deepseek.com/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
-    "default_title": "翻译当前英文文章"
+    "default_title": "打开译读"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "options_page": "options.html",
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "css": ["content.css"],
       "run_at": "document_idle"
     }
   ]

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>译读</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="yidu-header">
+    <div class="yidu-brand"><span class="yidu-mark" aria-hidden="true">译</span><span>译读</span></div>
+    <button id="settings" class="yidu-settings" type="button" aria-label="打开译读设置">设置</button>
+  </header>
+  <div class="yidu-controls">
+    <span class="yidu-tab" aria-current="page">中文翻译</span>
+    <button id="term-toggle" class="yidu-term-toggle" type="button" role="switch" aria-checked="false">
+      <span>AI 术语高亮</span><i aria-hidden="true"></i>
+    </button>
+  </div>
+  <div id="status" class="yidu-status" role="status" aria-live="polite">正在读取文章…</div>
+  <main id="content" class="yidu-content" aria-busy="true"></main>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

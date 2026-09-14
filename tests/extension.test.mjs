@@ -4,46 +4,64 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("manifest.json", root), "utf8"));
+const background = await readFile(new URL("background.js", root), "utf8");
 const content = await readFile(new URL("content.js", root), "utf8");
-const styles = await readFile(new URL("content.css", root), "utf8");
+const panelHtml = await readFile(new URL("sidepanel.html", root), "utf8");
+const panelScript = await readFile(new URL("sidepanel.js", root), "utf8");
+const panelStyles = await readFile(new URL("sidepanel.css", root), "utf8");
 const optionsHtml = await readFile(new URL("options.html", root), "utf8");
 const optionsScript = await readFile(new URL("options.js", root), "utf8");
 
-test("configures a local Manifest V3 Chrome extension", () => {
+test("configures a local Manifest V3 side panel extension", () => {
   assert.equal(manifest.manifest_version, 3);
+  assert.equal(manifest.minimum_chrome_version, "114");
   assert.equal(manifest.background.service_worker, "background.js");
+  assert.equal(manifest.side_panel.default_path, "sidepanel.html");
   assert.equal(manifest.options_page, "options.html");
-  assert.deepEqual(manifest.permissions, ["storage", "scripting", "activeTab"]);
+  assert.ok(manifest.permissions.includes("sidePanel"));
+  assert.ok(manifest.permissions.includes("tabs"));
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
+  assert.match(background, /openPanelOnActionClick:\s*true/);
 });
 
-test("injects the reader when the current tab predates extension loading", async () => {
-  const background = await readFile(new URL("background.js", root), "utf8");
-  assert.match(background, /chrome\.scripting\.insertCSS/);
-  assert.match(background, /chrome\.scripting\.executeScript/);
-  assert.equal((background.match(/YIDU_START/g) ?? []).length, 2);
-});
-test("keeps the MVP reader focused on bilingual comparison", () => {
-  assert.match(content, />双语对照</);
-  assert.doesNotMatch(content, /仅中文|重新翻译/);
-  assert.match(content, /YIDU_TRANSLATE_BATCH/);
-  assert.match(content, /className = "yidu-term"/);
-  assert.match(content, /role="switch" aria-checked="false"/);
-  assert.match(content, /data-terms-visible="false"/);
-  assert.match(content, /toggleTermHighlights/);
-  assert.match(content, /IntersectionObserver/);
-  assert.match(content, /YIDU_CACHE_GET/);
-  assert.match(content, /YIDU_CACHE_PUT/);
-  assert.match(content, /splitOversizedText/);
+test("extracts article semantics without rebuilding the source page", () => {
+  assert.match(content, /YIDU_GET_ARTICLE/);
+  assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li/);
+  assert.match(content, /<strong>/);
+  assert.match(content, /<u>/);
+  assert.match(content, /data-link/);
+  assert.match(content, /<code>/);
+  assert.match(content, /segments\.unshift\(titleSegment\)/);
+  assert.match(content, /figure/);
+  assert.doesNotMatch(content, /append\(root\)|documentElement\.style\.overflow/);
   assert.doesNotMatch(content, /segments\.length >= 64|totalCharacters \+ text\.length > 30000/);
 });
 
-test("highlights terms without prohibited visual shortcuts", () => {
-  assert.match(styles, /\.yidu-term\{/);
-  assert.doesNotMatch(styles, /transition:\s*all/);
-  assert.doesNotMatch(styles, /font-style:\s*italic/);
-  assert.doesNotMatch(styles, /#[0]{6}\b/i);
-  assert.doesNotMatch(styles, /border-left:\s*[2-9]px/);
+test("renders progressive rich translations in the side panel", () => {
+  assert.match(panelHtml, />中文翻译</);
+  assert.match(panelHtml, /AI 术语高亮/);
+  assert.doesNotMatch(panelHtml, /当前位置|已读/);
+  assert.match(panelScript, /IntersectionObserver/);
+  assert.match(panelScript, /waitForTabReady/);
+  assert.match(panelScript, /attempt < 3/);
+  assert.match(panelScript, /YIDU_CACHE_GET/);
+  assert.match(panelScript, /YIDU_CACHE_PUT/);
+  assert.match(panelScript, /sanitizeNode/);
+  assert.match(panelScript, /document\.createElement\("strong"\)/);
+  assert.match(panelScript, /document\.createElement\("u"\)/);
+  assert.match(panelScript, /document\.createElement\("a"\)/);
+  assert.match(panelScript, /className = "yidu-emphasis"/);
+  assert.match(panelHtml, /role="switch" aria-checked="false"/);
+});
+
+test("keeps the panel readable and avoids prohibited visual shortcuts", () => {
+  assert.match(panelStyles, /\.yidu-h1/);
+  assert.match(panelStyles, /\.yidu-blockquote/);
+  assert.match(panelStyles, /\.yidu-list/);
+  assert.doesNotMatch(panelStyles, /transition:\s*all/);
+  assert.doesNotMatch(panelStyles, /font-style:\s*italic/);
+  assert.doesNotMatch(panelStyles, /#[0]{6}\b/i);
+  assert.doesNotMatch(panelStyles, /border-left:\s*[2-9]px/);
 });
 
 test("loads settings before enabling input and verifies persistence", () => {
