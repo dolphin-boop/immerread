@@ -170,6 +170,12 @@
         content.append(element);
       }
       element.className = `yidu-segment yidu-${segment.kind} yidu-pending`;
+      if (segment.kind === "skipped") {
+        element.textContent = segment.text;
+        element.classList.remove("yidu-pending");
+        element.removeAttribute("aria-busy");
+        current.completed.add(segment.id);
+      }
       element.dataset.segmentId = segment.id;
       element.setAttribute("aria-busy", "true");
       current.rows.set(segment.id, element);
@@ -210,7 +216,7 @@
   }
 
   function enqueue(current, segment) {
-    if (current.stopped || current.failed || current.completed.has(segment.id) || current.queued.has(segment.id)) return;
+    if (current.stopped || current.failed || segment.kind === "skipped" || current.completed.has(segment.id) || current.queued.has(segment.id)) return;
     current.queue.push(segment);
     current.queued.add(segment.id);
     queueMicrotask(() => void processQueue(current));

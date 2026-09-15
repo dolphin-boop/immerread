@@ -1,3 +1,4 @@
+import { buildSelectionMessages, cleanSelectionResponse } from "./lib/selection.js";
 import {
   CACHE_STORAGE_KEY,
   mergeCachedItems,
@@ -23,6 +24,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const handlers = {
     YIDU_PREPARE_TAB: prepareTab,
     YIDU_TRANSLATE_BATCH: translateBatch,
+    YIDU_SELECTION_ACTION: selectionAction,
     YIDU_CACHE_GET: getCachedTranslations,
     YIDU_CACHE_PUT: putCachedTranslations
   };
@@ -116,5 +118,36 @@ async function translateBatch(payload) {
     };
   } catch (error) {
     return { ok: false, code: "TRANSLATION_FAILED", message: error?.message || "翻译失败，请稍后重试。" };
+  }
+}
+
+async function selectionAction(payload) {
+  try {
+    const messages = buildSelectionMessages(payload);
+    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel"]);
+    if (!settings.deepseekApiKey) {
+      return { ok: false, code: "SETUP_REQUIRED", message: "请先在设置中填写 DeepSeek API Key。" };
+    }
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + settings.deepseekApiKey
+      },
+      body: JSON.stringify({
+        model: settings.deepseekModel || getDefaultModel(),
+        temperature: 0.2,
+        max_tokens: 512,
+        messages
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.error?.message || "DeepSeek 请求失败（" + response.status + "）");
+    }
+    const body = await response.json();
+    return { ok: true, result: cleanSelectionResponse(body?.choices?.[0]?.message?.content) };
+  } catch (error) {
+    return { ok: false, code: "SELECTION_FAILED", message: error?.message || "请求失败，请稍后重试。" };
   }
 }

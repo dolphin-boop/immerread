@@ -1,0 +1,110 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const http = require("node:http");
+const os = require("node:os");
+const path = require("node:path");
+const { chromium } = require("playwright");
+
+const root = path.resolve(__dirname, "..");
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><article><h1>AI agent evaluation</h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p></article></main></body></html>';
+const server = http.createServer((_request, response) => {
+  response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  response.end(html);
+});
+
+(async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "yidu-selection-e2e-"));
+  let context;
+  try {
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    context = await chromium.launchPersistentContext(path.join(tempRoot, "profile"), {
+      executablePath: process.env.YIDU_CHROMIUM_PATH,
+      headless: false,
+      viewport: { width: 1280, height: 720 },
+      ignoreDefaultArgs: ["--disable-extensions"],
+      args: [
+        "--disable-extensions-except=" + root,
+        "--load-extension=" + root,
+        "--window-position=-32000,-32000"
+      ]
+    });
+    const page = context.pages()[0] || await context.newPage();
+    await page.goto("http://127.0.0.1:" + server.address().port + "/article");
+    const worker = await context.waitForEvent("serviceworker", { timeout: 10000 }).catch(() =>
+      context.serviceWorkers().find((item) => item.url().endsWith("/background.js")));
+    assert.ok(worker, "扩展后台未启动");
+    await worker.evaluate(async () => {
+      await chrome.storage.local.set({ deepseekApiKey: "test-only", deepseekModel: "deepseek-chat" });
+      globalThis.fetch = async (_url, options) => {
+        const request = JSON.parse(options.body);
+        if (request.response_format) {
+          const input = JSON.parse(request.messages[1].content);
+          const items = input.segments.map((segment) => ({
+            id: segment.id, translation: "译文：" + segment.text, terms: []
+          }));
+          return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
+        }
+        const content = request.messages[0].content.includes("中文解释") ? "智能体评测的简短解释。" : "评测框架。";
+
+        return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+      };
+    });
+
+    const extracted = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ url: "http://127.0.0.1/*" });
+      return chrome.tabs.sendMessage(tab.id, { type: "YIDU_GET_ARTICLE" });
+    });
+    assert.ok(extracted.ok);
+    assert.equal(extracted.article.segments.filter((segment) => segment.kind === "skipped").length, 1);
+    assert.ok(!extracted.article.segments.some((segment) => segment.text.includes("String matching checks")));
+    assert.equal(await page.locator("#grid").count(), 1, "原文复杂模块仍须存在");
+    const extensionOrigin = worker.url().match(/^(chrome-extension:\/\/[^/]+)/)[1];
+    const panel = await context.newPage();
+    await panel.goto(extensionOrigin + "/sidepanel.html");
+    await panel.locator(".yidu-skipped").waitFor();
+    assert.match(await panel.locator(".yidu-skipped").textContent(), /复杂模块保留在原文中/);
+    assert.equal(await panel.getByText("String matching checks", { exact: false }).count(), 0);
+
+
+    async function selectIntro() {
+      await page.evaluate(() => {
+        const node = document.querySelector("#intro").firstChild;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      });
+      await page.locator("#yidu-selection-root .yidu-menu button").first().waitFor();
+    }
+
+    await selectIntro();
+    assert.deepEqual(await page.locator("#yidu-selection-root .yidu-menu button").allTextContents(), ["翻译", "解释"]);
+    await page.locator("#yidu-selection-root .yidu-menu button").first().click();
+
+    await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "评测框架。" }).waitFor();
+    assert.match(await page.locator("#yidu-selection-root .yidu-result").textContent(), /翻译/);
+    await page.locator("#yidu-selection-root .yidu-close").click();
+    assert.equal(await page.locator("#yidu-selection-root .yidu-result").count(), 0);
+
+    await selectIntro();
+    await page.locator("#yidu-selection-root .yidu-menu button").nth(1).click();
+    await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "智能体评测的简短解释。" }).waitFor();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#yidu-selection-root .yidu-result").count(), 0);
+    await worker.evaluate(async () => chrome.storage.local.remove("deepseekApiKey"));
+    await selectIntro();
+    await page.locator("#yidu-selection-root .yidu-menu button").first().click();
+    await page.locator("#yidu-selection-root .yidu-error").filter({ hasText: "DeepSeek API Key" }).waitFor();
+    assert.equal(await page.locator("#yidu-selection-root .yidu-settings").textContent(), "打开设置");
+    console.log("选词翻译/解释、浮窗关闭、缺少密钥提示、复杂模块跳过：通过");
+  } finally {
+    await context?.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
