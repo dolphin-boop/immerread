@@ -81,7 +81,11 @@ import { containsTerm } from "./lib/glossary.js";
     const source = String(payload?.source || "").trim();
     if (!current || current.stopped || !source) return;
     current.glossaryEpoch += 1;
-    if (current.failed) return;
+    if (current.failed) {
+      current.failed = false;
+      document.querySelector(".yidu-error")?.remove();
+      current.failedSegments.splice(0).forEach((segment) => enqueue(current, segment));
+    }
     for (const segment of current.article.segments) {
       if (segment.kind === "skipped" || !containsTerm(segment.text, source)) continue;
       if (current.completed.delete(segment.id)) {

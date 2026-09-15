@@ -61,7 +61,8 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /handleSourceSelection/);
   assert.match(panelScript, /handleGlossaryChanged/);
   assert.match(panelScript, /glossaryEpoch/);
-  assert.match(panelScript, /if \(current\.failed\) return;/);
+  assert.match(panelScript, /current\.failedSegments\.splice\(0\)\.forEach\(\(segment\) => enqueue/);
+  assert.doesNotMatch(panelScript, /if \(current\.failed\) return;/);
   assert.match(panelHtml, /type="module" src="sidepanel.js"/);
   assert.match(panelScript, /waitForTabReady/);
   assert.match(panelScript, /attempt < 3/);

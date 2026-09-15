@@ -4,6 +4,9 @@ import {
   containsTerm,
   glossaryForSegments,
   matchingGlossaryEntries,
+  missingFixedTerms,
+  prepareFixedTermRetry,
+  restoreFixedTermRetry,
   normalizeGlossaryEntry,
   segmentGlossarySignature,
   upsertGlossary
@@ -35,4 +38,25 @@ test("matches exact terms rather than substrings and sends only relevant terms",
 test("does not match a multiword term across two article segments", () => {
   const glossary = upsertGlossary({}, "agent systems", "智能体系统");
   assert.deepEqual(glossaryForSegments(glossary, [{ text: "An agent" }, { text: "systems improve." }]), {});
+});
+test("repairs a model response that translated a locked English term into Chinese", () => {
+  const glossary = upsertGlossary({}, "agents", "agents");
+  const segments = [{ id: "title", text: "Demystifying evals for AI agents", markup: "<strong>Demystifying evals for AI agents</strong>" }];
+  const initial = [{ id: "title", translation: "揭开 AI 智能体评测的神秘面纱", terms: [] }];
+  assert.deepEqual(missingFixedTerms(glossary, segments, initial), [{ id: "title", source: "agents", target: "agents" }]);
+  const retry = prepareFixedTermRetry(glossary, segments);
+  assert.match(retry.segments[0].text, /__YIDU_TERM_0_0__/);
+  assert.match(retry.segments[0].markup, /<strong>.*__YIDU_TERM_0_0__<\/strong>/);
+  const repaired = restoreFixedTermRetry([{ id: "title", translation: "揭开 <strong>AI __YIDU_TERM_0_0__</strong> 评测的神秘面纱", terms: [] }], retry.replacements);
+  assert.match(repaired[0].translation, /<strong>AI agents<\/strong>/);
+  assert.deepEqual(missingFixedTerms(glossary, segments, repaired), []);
+  assert.throws(() => restoreFixedTermRetry(initial, retry.replacements), /未保留固定译法/);
+});
+
+test("protects longer terms first and escapes user-selected HTML-like targets", () => {
+  const glossary = upsertGlossary(upsertGlossary({}, "agents", "智能体"), "AI agents", "<AI agents>");
+  const retry = prepareFixedTermRetry(glossary, [{ id: "one", text: "AI agents", markup: "<strong>AI agents</strong>" }]);
+  assert.equal(retry.replacements.get("one").length, 1);
+  const repaired = restoreFixedTermRetry([{ id: "one", translation: "<strong>__YIDU_TERM_0_0__</strong>" }], retry.replacements);
+  assert.equal(repaired[0].translation, "<strong>&lt;AI agents&gt;</strong>");
 });

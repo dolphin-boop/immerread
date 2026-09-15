@@ -1,5 +1,5 @@
 import { buildSelectionMessages, cleanSelectionResponse } from "./lib/selection.js";
-import { GLOSSARY_STORAGE_KEY, glossaryForSegments, upsertGlossary } from "./lib/glossary.js";
+import { GLOSSARY_STORAGE_KEY, glossaryForSegments, missingFixedTerms, prepareFixedTermRetry, restoreFixedTermRetry, upsertGlossary } from "./lib/glossary.js";
 import {
   CACHE_STORAGE_KEY,
   mergeCachedItems,
@@ -96,43 +96,53 @@ async function translateBatch(payload) {
       return { ok: false, code: "EMPTY_BATCH", message: "没有可翻译的文章内容。" };
     }
 
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.deepseekApiKey}`
-      },
-      body: JSON.stringify({
-        model: settings.deepseekModel || getDefaultModel(),
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-        messages: buildTranslationMessages({
-          ...payload,
-          glossary: {
-            ...(payload?.glossary || {}),
-            ...glossaryForSegments(settings[GLOSSARY_STORAGE_KEY], segments)
-          }
-        })
-      })
-    });
+    const fixedGlossary = settings[GLOSSARY_STORAGE_KEY] || { version: 1, entries: {} };
+    const glossary = {
+      ...(payload?.glossary || {}),
+      ...glossaryForSegments(fixedGlossary, segments)
+    };
 
-    if (!response.ok) {
-      const detail = await response.json().catch(() => null);
-      throw new Error(detail?.error?.message || `DeepSeek 请求失败（${response.status}）`);
+    async function requestTranslations(requestSegments, protectTerms = false) {
+      const messages = buildTranslationMessages({ ...payload, segments: requestSegments, glossary });
+      if (protectTerms) {
+        messages[0].content += "\n原文中的 __YIDU_TERM_数字_数字__ 是固定译法占位符。translation 中必须原样保留全部占位符，不要翻译、替换或删除；扩展会在返回后填入用户指定译法。";
+      }
+      const response = await fetch("https://api.deepseek.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.deepseekApiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.deepseekModel || getDefaultModel(),
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+          messages
+        })
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(detail?.error?.message || `DeepSeek 请求失败（${response.status}）`);
+      }
+      const body = await response.json();
+      return parseTranslationResponse(body?.choices?.[0]?.message?.content, requestSegments.map((segment) => segment.id));
     }
 
-    const body = await response.json();
-    const raw = body?.choices?.[0]?.message?.content;
-    return {
-      ok: true,
-      items: parseTranslationResponse(raw, segments.map((segment) => segment.id)),
-      glossarySnapshot: settings[GLOSSARY_STORAGE_KEY] || { version: 1, entries: {} }
-    };
+    let items = await requestTranslations(segments);
+    const missing = missingFixedTerms(fixedGlossary, segments, items);
+    if (missing.length) {
+      const retryIds = new Set(missing.map((term) => term.id));
+      const retryOriginal = segments.filter((segment) => retryIds.has(String(segment.id)));
+      const retry = prepareFixedTermRetry(fixedGlossary, retryOriginal);
+      const repaired = restoreFixedTermRetry(await requestTranslations(retry.segments, true), retry.replacements);
+      const byId = new Map(repaired.map((item) => [item.id, item]));
+      items = items.map((item) => byId.get(item.id) || item);
+    }
+    return { ok: true, items, glossarySnapshot: fixedGlossary };
   } catch (error) {
     return { ok: false, code: "TRANSLATION_FAILED", message: error?.message || "翻译失败，请稍后重试。" };
   }
 }
-
 function saveGlossaryEntry(payload) {
   glossaryWriteChain = glossaryWriteChain.catch(() => undefined).then(async () => {
     try {
