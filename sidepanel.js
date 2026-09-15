@@ -327,11 +327,23 @@ import { containsTerm } from "./lib/glossary.js";
     const row = current.rows.get(id);
     const segment = current.segmentsById.get(id);
     if (!row || !segment) return;
-    row.replaceChildren(buildSafeFragment(item.translation, segment, current.termsVisible ? item.terms : []));
+    const fragment = buildSafeFragment(item.translation, segment, current.termsVisible ? item.terms : []);
+    if (/^h[1-6]$/.test(segment.kind)) cleanHeadingFragment(fragment);
+    row.replaceChildren(fragment);
     if (current.completed.has(id)) {
       row.classList.remove("yidu-pending", "yidu-refreshing");
       row.removeAttribute("aria-busy");
       row.dataset.translated = "true";
+    }
+  }
+
+  function cleanHeadingFragment(fragment) {
+    const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.nodeValue.trim()) continue;
+      node.nodeValue = node.nodeValue.replace(/^\s*[:：]\s*/, "");
+      if (node.nodeValue.trim()) break;
     }
   }
 

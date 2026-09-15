@@ -65,11 +65,12 @@
       const kind = getBlockKind(node);
       const prepared = prepareBlock(node);
       const accessibleTitle = kind === "h1" ? node.getAttribute("aria-label")?.trim() : "";
-      const text = accessibleTitle || readableText(prepared);
+      const text = cleanHeadingStart(accessibleTitle || readableText(prepared), kind);
       if (text.length < 2) continue;
       const serialized = accessibleTitle
         ? { markup: escapeHtml(accessibleTitle), links: [] }
         : serializeInline(prepared);
+      if (/^h[1-6]$/.test(kind)) serialized.markup = cleanHeadingStart(serialized.markup, kind);
       const chunks = text.length > MAX_SEGMENT_CHARS
         ? splitOversizedText(text).map((chunk) => ({ text: chunk, markup: escapeHtml(chunk), links: [] }))
         : [{ text, markup: serialized.markup, links: serialized.links }];
@@ -154,8 +155,13 @@
   }
   function prepareBlock(node) {
     const clone = node.cloneNode(true);
+    clone.querySelectorAll("[aria-hidden='true']").forEach((hidden) => hidden.remove());
     if (node.matches("li")) clone.querySelectorAll("ul, ol").forEach((list) => list.remove());
     return clone;
+  }
+
+  function cleanHeadingStart(value, kind) {
+    return /^h[1-6]$/.test(kind) ? value.replace(/^\s*[:：]\s*/, "") : value;
   }
 
   function getBlockKind(node) {

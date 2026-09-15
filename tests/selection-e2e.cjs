@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
 const longText = "Long article paragraph with many sentences about evaluating autonomous agents. ".repeat(30);
-const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><h2 id="agents-heading">Demystifying evals for AI agents</h2><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p id="plural">Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1><span aria-hidden="true">:</span><span>Claude Fable 5.1 and Mythos 5.1</span></h1><h2 id="agents-heading">:Demystifying evals for AI agents</h2><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p id="plural">Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
 const server = http.createServer((_request, response) => {
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
@@ -51,7 +51,7 @@ const server = http.createServer((_request, response) => {
           if (locked) await new Promise((resolve) => setTimeout(resolve, 400));
           const items = input.segments.map((segment) => ({
             id: segment.id,
-            translation: (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
+            translation: (segment.kind === "h1" ? ":" : "") + (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
               + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们")),
             terms: []
           }));
@@ -70,6 +70,8 @@ const server = http.createServer((_request, response) => {
     assert.ok(extracted.ok);
     assert.equal(extracted.article.segments.filter((segment) => segment.kind === "skipped").length, 2);
     assert.equal(extracted.article.segments.find((segment) => segment.kind === "h1").text, "Claude Fable 5.1 and Mythos 5.1");
+    assert.equal(extracted.article.segments.find((segment) => segment.kind === "h2").text, "Demystifying evals for AI agents");
+    assert.equal(extracted.article.segments.find((segment) => segment.kind === "h2").markup, "Demystifying evals for AI agents");
     assert.ok(!extracted.article.segments.some((segment) => segment.text.includes("String matching checks")));
     assert.ok(!extracted.article.segments.some((segment) => segment.text.includes("friendly Fable")));
     assert.equal(await page.locator("#grid").count(), 1, "原文复杂模块仍须存在");
@@ -79,7 +81,7 @@ const server = http.createServer((_request, response) => {
     await panel.goto(extensionOrigin + "/sidepanel.html");
     await panel.locator(".yidu-skipped").first().waitFor();
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
-    assert.ok(!(await panel.locator(".yidu-h1").textContent()).includes(":Claude:"));
+    assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
     assert.equal(await panel.locator(".yidu-skipped").count(), 2);
     assert.equal(await panel.locator(".yidu-skipped").first().getAttribute("aria-busy"), null);
     assert.match(await panel.locator(".yidu-skipped").first().textContent(), /复杂模块保留在原文中/);
