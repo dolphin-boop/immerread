@@ -1,6 +1,7 @@
 (() => {
   if (globalThis.__yiduArticleExtractorInstalled) return;
   globalThis.__yiduArticleExtractorInstalled = true;
+  document.getElementById("yidu-selection-root")?.remove();
 
   const MAX_SEGMENT_CHARS = 1200;
   const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, blockquote, li";
@@ -115,10 +116,14 @@
     const current = trackedBlocks[trackedIndex];
     const rect = current.node.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (anchor - rect.top) / Math.max(rect.height, 1)));
-    void chrome.runtime.sendMessage({
-      type: "YIDU_SOURCE_SCROLL",
-      payload: { segmentId: current.id, ratio }
-    }).catch(() => undefined);
+    try {
+      void chrome.runtime.sendMessage({
+        type: "YIDU_SOURCE_SCROLL",
+        payload: { segmentId: current.id, ratio }
+      }).catch(() => undefined);
+    } catch {
+      // 扩展重载后旧内容脚本的消息上下文可能已失效。
+    }
   }
   function findComplexModule(node, container) {
     let parent = node.parentElement;
@@ -252,7 +257,8 @@
     }
   }, true);
 
-  function onSelectionChange() {
+  function onSelectionChange(event) {
+    if (event?.target && selectionRoot?.contains(event.target)) return;
     emitSelectionSync();
     if (selectionShadow?.querySelector(".yidu-result")) return;
     const selection = window.getSelection();
@@ -288,10 +294,14 @@
     const key = ids.join(",");
     if (!force && key === lastSelectionKey) return;
     lastSelectionKey = key;
-    void chrome.runtime.sendMessage({
-      type: "YIDU_SOURCE_SELECTION",
-      payload: { segmentIds: ids }
-    }).catch(() => undefined);
+    try {
+      void chrome.runtime.sendMessage({
+        type: "YIDU_SOURCE_SELECTION",
+        payload: { segmentIds: ids }
+      }).catch(() => undefined);
+    } catch {
+      // 仍允许打开划词浮窗，由浮窗给出刷新网页的恢复入口。
+    }
   }
   function ensureSelectionRoot() {
     if (selectionRoot) return;
@@ -306,15 +316,24 @@
       ".yidu-menu,.yidu-result{position:fixed;pointer-events:auto;background:#fffdf9;border:1px solid #e5d7cb;box-shadow:0 12px 34px rgba(28,24,20,.19);border-radius:12px}",
       ".yidu-menu{display:flex;gap:4px;padding:5px}",
       ".yidu-menu button{border:0;background:transparent;border-radius:7px;padding:7px 13px;color:#25201d;font-size:14px}",
-      ".yidu-menu button:hover,.yidu-menu button:focus-visible{background:#f4e8df;outline:none}",
-      ".yidu-result{width:min(370px,calc(100vw - 24px));max-height:min(440px,calc(100vh - 24px));overflow:auto;padding:16px;box-sizing:border-box}",
+      ".yidu-menu button:hover{background:#f4e8df}",
+      ".yidu-menu button:focus-visible,.yidu-close:focus-visible,.yidu-save:focus-visible,.yidu-reload:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}",
+      ".yidu-result{width:min(370px,calc(100vw - 24px));max-height:min(440px,calc(100vh - 24px));overflow:auto;overscroll-behavior:contain;padding:16px;box-sizing:border-box}",
       ".yidu-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#a45032;font-size:14px;font-weight:700}",
       ".yidu-close{border:0;background:transparent;color:#61544e;font-size:22px;line-height:1;padding:2px 7px;border-radius:6px}",
-      ".yidu-close:hover,.yidu-close:focus-visible{background:#f4e8df;outline:none}",
+      ".yidu-close:hover{background:#f4e8df}",
       ".yidu-source{font-size:12px;color:#786c64;margin:12px 0;border-bottom:1px solid #eee5dd;padding-bottom:10px;overflow-wrap:anywhere}",
       ".yidu-body{font-size:15px;line-height:1.7;color:#25201d;white-space:pre-wrap;overflow-wrap:anywhere}",
       ".yidu-error{color:#a33f27}",
-      ".yidu-settings{margin-top:12px;border:1px solid #b86144;background:#fffdf9;color:#a45032;border-radius:7px;padding:6px 10px;font-size:13px}"
+      ".yidu-settings,.yidu-reload{margin-top:12px;border:1px solid #b86144;background:#fffdf9;color:#a45032;border-radius:7px;padding:7px 11px;font-size:13px}",
+      ".yidu-glossary-form{display:grid;gap:8px;margin-top:12px}",
+      ".yidu-glossary-form label{font-size:13px;color:#61544e}",
+      ".yidu-glossary-form input{min-height:38px;border:1px solid #d9c9bc;border-radius:7px;background:#fff;color:#25201d;padding:7px 10px;font:inherit;font-size:14px;box-sizing:border-box;min-width:0}",
+      ".yidu-glossary-form input:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}",
+      ".yidu-save{justify-self:start;min-height:36px;border:0;border-radius:7px;background:#a45032;color:#fff;padding:7px 12px;font-size:13px;font-weight:600}",
+      ".yidu-save:disabled{opacity:.65;cursor:wait}",
+      ".yidu-feedback{font-size:13px;line-height:1.55;overflow-wrap:anywhere}",
+      ".yidu-feedback:empty{display:none}"
     ].join("");
     selectionShadow.append(style);
     document.documentElement.append(selectionRoot);
@@ -339,16 +358,103 @@
     menu.className = "yidu-menu";
     menu.setAttribute("role", "group");
     menu.setAttribute("aria-label", "选中文字操作");
-    for (const action of ["translate", "explain"]) {
+    for (const action of ["translate", "explain", "glossary"]) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = action === "translate" ? "翻译" : "解释";
+      button.textContent = action === "translate" ? "翻译" : action === "explain" ? "解释" : "固定译法";
       button.addEventListener("pointerdown", (event) => event.preventDefault());
-      button.addEventListener("click", () => void runSelectionAction(action));
+      button.addEventListener("click", () => action === "glossary" ? openGlossaryForm() : void runSelectionAction(action));
       menu.append(button);
     }
     selectionShadow.append(menu);
     place(menu, selectedRect, 8);
+  }
+
+  function openGlossaryForm() {
+    const text = selectedText;
+    const rect = selectedRect;
+    selectionShadow.querySelector(".yidu-menu")?.remove();
+    const box = document.createElement("section");
+    box.className = "yidu-result";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "固定译法");
+    const head = document.createElement("div");
+    head.className = "yidu-head";
+    const heading = document.createElement("strong");
+    heading.textContent = "固定译法";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "yidu-close";
+    close.setAttribute("aria-label", "关闭");
+    close.textContent = "×";
+    close.addEventListener("click", hideSelectionUi);
+    head.append(heading, close);
+    const source = document.createElement("p");
+    source.className = "yidu-source";
+    source.textContent = text;
+    const form = document.createElement("form");
+    form.className = "yidu-glossary-form";
+    const label = document.createElement("label");
+    label.textContent = "以后希望译为";
+    label.htmlFor = "yidu-glossary-target";
+    const input = document.createElement("input");
+    input.id = "yidu-glossary-target";
+    input.type = "text";
+    input.maxLength = 80;
+    input.required = true;
+    input.placeholder = "输入指定译法…";
+    const save = document.createElement("button");
+    save.className = "yidu-save";
+    save.type = "submit";
+    save.textContent = "保存译法";
+    const feedback = document.createElement("div");
+    feedback.className = "yidu-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+    form.append(label, input, save, feedback);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const target = input.value.trim();
+      save.disabled = true;
+      save.textContent = "保存中…";
+      feedback.textContent = "";
+      feedback.classList.remove("yidu-error");
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: "YIDU_GLOSSARY_UPSERT",
+          payload: { source: text, target }
+        });
+        if (!response?.ok) throw new Error(response?.message || "保存指定译法失败，请重试。");
+        feedback.textContent = "已保存；右侧相关段落将重新翻译。";
+        save.textContent = "更新译法";
+      } catch (error) {
+        showSelectionFailure(box, feedback, error);
+        save.textContent = "重试保存";
+      } finally {
+        save.disabled = false;
+        place(box, rect, 10);
+      }
+    });
+    box.append(head, source, form);
+    selectionShadow.append(box);
+    place(box, rect, 10);
+    input.focus();
+  }
+
+  function showSelectionFailure(box, target, error) {
+    target.classList.add("yidu-error");
+    const disconnected = /Extension context invalidated|context invalidated|Receiving end does not exist|message port closed/i.test(error?.message || "");
+    target.textContent = disconnected
+      ? "译读连接已失效。刷新当前网页后重试。"
+      : error?.message || "请求失败，请重试。";
+    if (disconnected && !box.querySelector(".yidu-reload")) {
+      const reload = document.createElement("button");
+      reload.type = "button";
+      reload.className = "yidu-reload";
+      reload.textContent = "刷新网页";
+      reload.addEventListener("click", () => location.reload());
+      box.append(reload);
+    }
   }
 
   async function runSelectionAction(action) {
@@ -392,8 +498,7 @@
       body.textContent = response.result;
     } catch (error) {
       if (requestId !== currentRequest || !box.isConnected) return;
-      body.classList.add("yidu-error");
-      body.textContent = error?.message || "请求失败，请重试。";
+      showSelectionFailure(box, body, error);
       if (error?.code === "SETUP_REQUIRED") {
         const settings = document.createElement("button");
         settings.type = "button";

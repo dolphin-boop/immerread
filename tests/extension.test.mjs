@@ -25,6 +25,8 @@ test("configures a local Manifest V3 side panel extension", () => {
   assert.ok(manifest.host_permissions.includes("https://*/*"));
   assert.match(background, /openPanelOnActionClick:\s*true/);
   assert.match(background, /chrome\.scripting\.executeScript/);
+  assert.match(background, /YIDU_GLOSSARY_UPSERT/);
+  assert.match(background, /glossaryForSegments/);
 });
 
 test("extracts article semantics without rebuilding the source page", () => {
@@ -32,6 +34,10 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /YIDU_SOURCE_SCROLL/);
   assert.match(content, /YIDU_SOURCE_SELECTION/);
   assert.match(content, /YIDU_REQUEST_SELECTION_SYNC/);
+  assert.match(content, /固定译法/);
+  assert.match(content, /overscroll-behavior:contain/);
+  assert.match(content, /刷新当前网页后重试/);
+  assert.match(content, /yidu-selection-root/);
   assert.match(content, /requestAnimationFrame/);
   assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li/);
   assert.match(content, /<strong>/);
@@ -53,6 +59,10 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /YIDU_REQUEST_SCROLL_SYNC/);
   assert.match(panelScript, /YIDU_REQUEST_SELECTION_SYNC/);
   assert.match(panelScript, /handleSourceSelection/);
+  assert.match(panelScript, /handleGlossaryChanged/);
+  assert.match(panelScript, /glossaryEpoch/);
+  assert.match(panelScript, /if \(current\.failed\) return;/);
+  assert.match(panelHtml, /type="module" src="sidepanel.js"/);
   assert.match(panelScript, /waitForTabReady/);
   assert.match(panelScript, /attempt < 3/);
   assert.match(panelScript, /页面连接失败，请刷新文章页面后重试/);

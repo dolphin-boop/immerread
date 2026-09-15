@@ -40,8 +40,10 @@ const server = http.createServer((_request, response) => {
         const request = JSON.parse(options.body);
         if (request.response_format) {
           const input = JSON.parse(request.messages[1].content);
+          const locked = request.messages[0].content.includes("agent => 代理体");
+          if (locked) await new Promise((resolve) => setTimeout(resolve, 400));
           const items = input.segments.map((segment) => ({
-            id: segment.id, translation: "译文：" + segment.text, terms: []
+            id: segment.id, translation: (locked ? "新术语译文：" : "译文：") + segment.text, terms: []
           }));
           return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
         }
@@ -96,7 +98,7 @@ const server = http.createServer((_request, response) => {
     assert.equal(await panel.locator(".yidu-source-selected").count(), 1);
     assert.equal(await panel.locator(".yidu-source-selected").first().getAttribute("data-segment-id"), extracted.article.segments.find((segment) => segment.text.startsWith("Evaluation harnesses")).id);
     assert.equal(await panel.locator(".yidu-source-selected").first().evaluate((row) => getComputedStyle(row).backgroundColor), "rgb(243, 231, 218)");
-    assert.deepEqual(await page.locator("#yidu-selection-root .yidu-menu button").allTextContents(), ["翻译", "解释"]);
+    assert.deepEqual(await page.locator("#yidu-selection-root .yidu-menu button").allTextContents(), ["翻译", "解释", "固定译法"]);
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();
 
     await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "评测框架。" }).waitFor();
@@ -142,12 +144,71 @@ const server = http.createServer((_request, response) => {
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     });
     await panel.locator(".yidu-source-selected").first().waitFor({ state: "detached" });
+    const introId = extracted.article.segments.find((segment) => segment.text.startsWith("Evaluation harnesses")).id;
+    await panel.locator(".yidu-segment[data-segment-id=\"" + introId + "\"][data-translated=\"true\"]").waitFor();
+    await page.evaluate(() => {
+      const node = document.querySelector("#intro").firstChild;
+      const start = node.textContent.indexOf("agent");
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + "agent".length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await page.locator("#yidu-selection-root .yidu-menu button").nth(2).click();
+    if (process.env.YIDU_GLOSSARY_SCREENSHOT) await page.screenshot({ path: process.env.YIDU_GLOSSARY_SCREENSHOT });
+    await page.locator("#yidu-selection-root .yidu-glossary-form input").fill("代理体");
+    await page.locator("#yidu-selection-root .yidu-save").click();
+    await page.locator("#yidu-selection-root .yidu-feedback").filter({ hasText: "已保存" }).waitFor();
+    const savedGlossary = await worker.evaluate(async () => {
+      const stored = await chrome.storage.local.get("yiduGlossaryV1");
+      return stored.yiduGlossaryV1;
+    });
+    assert.equal(savedGlossary.entries.agent.target, "代理体");
+    await panel.locator(".yidu-segment[data-segment-id=\"" + introId + "\"].yidu-refreshing").waitFor();
+    assert.match(await panel.locator(".yidu-segment[data-segment-id=\"" + introId + "\"]").textContent(), /^译文：/, "重翻过程中须保留旧译文");
+    await panel.locator(".yidu-segment[data-segment-id=\"" + introId + "\"]").filter({ hasText: "新术语译文：" }).waitFor();
+    const matchingCache = await worker.evaluate(async () => {
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const stored = await chrome.storage.local.get("yiduTranslationCacheV1");
+        const articles = Object.values(stored.yiduTranslationCacheV1?.articles || {});
+        if (articles.some((article) => Object.values(article.entries || {})
+          .some((entry) => entry.translation?.startsWith("新术语译文：")))) return true;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return false;
+    });
+    assert.equal(matchingCache, true, "术语更新后的右侧译文应写入缓存");
+    const anotherArticle = await panel.evaluate(async () => chrome.runtime.sendMessage({
+      type: "YIDU_TRANSLATE_BATCH",
+      payload: {
+        title: "Another article",
+        segments: [{ id: "a1", kind: "paragraph", text: "An agent evaluates results.", markup: "An agent evaluates results." }],
+        glossary: {}
+      }
+    }));
+    assert.ok(anotherArticle.ok);
+    assert.match(anotherArticle.items[0].translation, /新术语译文/, "新文章应沿用已保存术语");
+    await page.locator("#yidu-selection-root .yidu-close").click();
     await worker.evaluate(async () => chrome.storage.local.remove("deepseekApiKey"));
     await selectIntro();
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();
     await page.locator("#yidu-selection-root .yidu-error").filter({ hasText: "DeepSeek API Key" }).waitFor();
     assert.equal(await page.locator("#yidu-selection-root .yidu-settings").textContent(), "打开设置");
-    console.log("选词翻译/解释、对应段落暖色标识及清除、长段落、复杂模块、缺少密钥：通过");
+    await page.locator("#yidu-selection-root .yidu-close").click();
+    await worker.evaluate(() => {
+      setTimeout(() => chrome.runtime.reload(), 30);
+      return true;
+    });
+    await page.waitForTimeout(700);
+    await selectIntro();
+    await page.locator("#yidu-selection-root .yidu-menu button").nth(1).click();
+    await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "刷新当前网页后重试" }).waitFor();
+    assert.equal(await page.locator("#yidu-selection-root .yidu-reload").textContent(), "刷新网页");
+    assert.doesNotMatch(await page.locator("#yidu-selection-root .yidu-result").textContent(), /Extension context invalidated/);
+    console.log("选词翻译/解释、固定译法跨文章沿用、右侧局部重翻及缓存、复杂模块：通过");
   } finally {
     await context?.close();
     await new Promise((resolve) => server.close(resolve));

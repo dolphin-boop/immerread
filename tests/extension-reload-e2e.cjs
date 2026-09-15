@@ -80,7 +80,9 @@ const server = http.createServer((_request, response) => {
         deepseekApiKey: "test-only",
         deepseekModel: "deepseek-chat"
       });
+      globalThis.__yiduFetchCalls = 0;
       globalThis.fetch = async (_url, options) => {
+        globalThis.__yiduFetchCalls += 1;
         const request = JSON.parse(options.body);
         const input = JSON.parse(request.messages[1].content);
         const items = input.segments.map((segment) => ({
@@ -108,6 +110,25 @@ const server = http.createServer((_request, response) => {
     assert.equal(await panel.locator(".yidu-segment").count(), 96);
     assert.equal(await panel.getByText("Could not establish connection").count(), 0);
     assert.ok(await panel.getByText(/重连译文/).count() > 0);
+    const initialTranslated = await panel.locator('.yidu-segment[data-translated="true"]').count();
+    assert.ok(initialTranslated >= 4 && initialTranslated < 96, "长文应按视区渐进翻译");
+    const rich = panel.locator('[data-segment-id="s3"]');
+    await rich.locator("strong").waitFor();
+    assert.equal(await rich.locator("u").count(), 1);
+    assert.equal(await rich.locator("code").textContent(), "model_id");
+    await articlePage.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await panel.waitForFunction(() => window.scrollY > 100);
+    await panel.waitForFunction(() => [...document.querySelectorAll(".yidu-segment")].at(-1)?.dataset.translated === "true");
+    const callsBeforeReload = await worker.evaluate(() => globalThis.__yiduFetchCalls);
+    assert.ok(callsBeforeReload >= 2);
+    await panel.reload();
+    await panel.locator(".yidu-segment").first().waitFor();
+    await panel.waitForFunction(() => document.querySelectorAll('.yidu-segment[data-translated="true"]').length >= 4);
+    await panel.waitForTimeout(400);
+    assert.equal(await worker.evaluate(() => globalThis.__yiduFetchCalls), callsBeforeReload, "刷新侧栏应复用段落缓存");
     console.log("PASS: side panel reinjects when the article has no message receiver");
   } finally {
     if (context) await context.close();

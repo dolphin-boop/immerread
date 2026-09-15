@@ -1,3 +1,5 @@
+import { containsTerm } from "./lib/glossary.js";
+
 (() => {
   const BATCH_SIZE = 4;
   const VIEWPORT_MARGIN = "520px 0px";
@@ -25,6 +27,7 @@
   chrome.runtime.onMessage.addListener((message, sender) => {
     if (message?.type === "YIDU_SOURCE_SCROLL") handleSourceScroll(message.payload, sender.tab?.id);
     if (message?.type === "YIDU_SOURCE_SELECTION") handleSourceSelection(message.payload, sender.tab?.id);
+    if (message?.type === "YIDU_GLOSSARY_CHANGED") handleGlossaryChanged(message.payload);
     return false;
   });
 
@@ -73,6 +76,25 @@
       });
     }
   }
+  function handleGlossaryChanged(payload) {
+    const current = session;
+    const source = String(payload?.source || "").trim();
+    if (!current || current.stopped || !source) return;
+    current.glossaryEpoch += 1;
+    if (current.failed) return;
+    for (const segment of current.article.segments) {
+      if (segment.kind === "skipped" || !containsTerm(segment.text, source)) continue;
+      if (current.completed.delete(segment.id)) {
+        const row = current.rows.get(segment.id);
+        row?.classList.add("yidu-refreshing");
+        row?.setAttribute("aria-busy", "true");
+        enqueue(current, segment);
+      } else if (current.selectedSegmentIds.has(segment.id)) {
+        enqueue(current, segment);
+      }
+    }
+  }
+
   async function loadActiveArticle() {
     stopSession();
     setStatus("正在读取文章…");
@@ -155,7 +177,8 @@
       failedSegments: [],
       cachedCount: 0,
       termsVisible: false,
-      selectedSegmentIds: new Set()
+      selectedSegmentIds: new Set(),
+      glossaryEpoch: 0
     };
     session = next;
     renderArticle(next);
@@ -256,16 +279,21 @@
         segments.forEach((segment) => current.queued.delete(segment.id));
         current.failedSegments = segments;
         updateProgress(current, segments.length);
+        const epoch = current.glossaryEpoch;
         const result = await chrome.runtime.sendMessage({
           type: "YIDU_TRANSLATE_BATCH",
           payload: { title: current.article.title, segments, glossary: current.glossary }
         });
         if (!result?.ok) throw Object.assign(new Error(result?.message || "翻译失败"), { code: result?.code });
         if (current.stopped) return;
+        if (epoch !== current.glossaryEpoch) {
+          segments.forEach((segment) => enqueue(current, segment));
+          continue;
+        }
         for (const item of result.items) applyTranslation(current, item, false);
         void chrome.runtime.sendMessage({
           type: "YIDU_CACHE_PUT",
-          payload: { url: current.article.url, segments, items: result.items }
+          payload: { url: current.article.url, segments, items: result.items, glossarySnapshot: result.glossarySnapshot }
         }).catch(() => undefined);
         current.failedSegments = [];
       }
@@ -296,9 +324,11 @@
     const segment = current.segmentsById.get(id);
     if (!row || !segment) return;
     row.replaceChildren(buildSafeFragment(item.translation, segment, current.termsVisible ? item.terms : []));
-    row.classList.remove("yidu-pending");
-    row.removeAttribute("aria-busy");
-    row.dataset.translated = "true";
+    if (current.completed.has(id)) {
+      row.classList.remove("yidu-pending", "yidu-refreshing");
+      row.removeAttribute("aria-busy");
+      row.dataset.translated = "true";
+    }
   }
 
   function buildSafeFragment(markup, segment, terms) {

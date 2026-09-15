@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { upsertGlossary } from "../lib/glossary.js";
 import {
   CACHE_TTL_MS,
   MAX_CACHED_ARTICLES,
@@ -44,4 +45,19 @@ test("expires old entries and keeps only the most recent articles", () => {
   const clean = pruneCache({ articles }, 1000);
   assert.equal(Object.keys(clean.articles).length, MAX_CACHED_ARTICLES);
   assert.equal(clean.articles.expired, undefined);
+});
+
+test("changing a confirmed term invalidates only matching paragraph cache", () => {
+  const unrelated = { id: "2", kind: "paragraph", text: "The trial is complete.", markup: "The trial is complete." };
+  const both = [...segments, unrelated];
+  const translations = [...items, { id: "2", translation: "试验已完成。", terms: [] }];
+  const before = upsertGlossary({}, "agent", "智能体", 100);
+  const cache = mergeCachedItems({}, {
+    url: "https://example.com/a", segments: both, items: translations, model: "deepseek-chat", glossary: before
+  }, 1000);
+  const after = upsertGlossary(before, "agent", "代理体", 200);
+  const restored = readCachedItems(cache, {
+    url: "https://example.com/a", segments: both, model: "deepseek-chat", glossary: after
+  }, 1001);
+  assert.deepEqual(restored.items.map((item) => item.id), ["2"]);
 });
