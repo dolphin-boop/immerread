@@ -69,8 +69,9 @@ import { groupArticleModules } from "./lib/summary.js";
       tabs[key].tabIndex = selected ? 0 : -1;
     }
     if (name === "glossary") void loadGlossaryEntries();
-    if (name === "summary" && !summaryContent.childElementCount) {
-      showSummaryMessage("请先打开一篇英文网页文章。");
+    if (name === "summary") {
+      if (session) void runSummaries(session);
+      else if (!summaryContent.childElementCount) showSummaryMessage("请先打开一篇英文网页文章。");
     }
   }
 
@@ -90,11 +91,15 @@ import { groupArticleModules } from "./lib/summary.js";
     title.textContent = current.article.title;
     const intro = document.createElement("p");
     intro.className = "yidu-view-intro";
-    intro.textContent = modules.length + " 个大模块";
-    const notice = document.createElement("p");
-    notice.className = "yidu-summary-note";
-    notice.textContent = "AI 总结服务待启用。";
-    summaryContent.append(title, intro, notice);
+    intro.textContent = modules.length + " 个大模块 · 按原文章节组织";
+    const progress = document.createElement("p");
+    progress.className = "yidu-summary-progress";
+    current.summaryProgress = progress;
+    summaryContent.append(title, intro, progress);
+    if (!modules.length) {
+      progress.textContent = "文章中没有可总结的正文。";
+      return;
+    }
     for (const [index, module] of modules.entries()) {
       const section = document.createElement("section");
       section.className = "yidu-summary-module";
@@ -102,11 +107,130 @@ import { groupArticleModules } from "./lib/summary.js";
       const number = document.createElement("span");
       number.className = "yidu-summary-number";
       number.textContent = String(index + 1).padStart(2, "0");
+      const details = document.createElement("div");
+      details.className = "yidu-summary-details";
       const heading = document.createElement("h2");
       heading.textContent = module.title;
-      section.append(number, heading);
+      const body = document.createElement("div");
+      body.className = "yidu-summary-body";
+      const pending = document.createElement("p");
+      pending.className = "yidu-summary-pending";
+      pending.textContent = "等待总结…";
+      body.append(pending);
+      details.append(heading, body);
+      section.append(number, details);
       summaryContent.append(section);
     }
+    updateSummaryProgress(current);
+    if (activeView === "summary") void runSummaries(current);
+  }
+
+  function summaryBody(module) {
+    return [...summaryContent.querySelectorAll(".yidu-summary-module")]
+      .find((section) => section.dataset.moduleId === module.id)
+      ?.querySelector(".yidu-summary-body");
+  }
+
+  function updateSummaryProgress(current) {
+    if (!current.summaryProgress || current.stopped || !current.summaryModules.length) return;
+    const done = current.summaryResults.size;
+    const total = current.summaryModules.length;
+    current.summaryProgress.textContent = (done === total
+      ? "已总结 " + total + " 个模块"
+      : "已总结 " + done + " / " + total + " 个模块") +
+      (current.summaryCachedCount ? " · 缓存 " + current.summaryCachedCount : "") +
+      (current.summaryCacheError ? " · 部分结果缓存失败" : "");
+  }
+
+  async function runSummaries(current) {
+    if (current.stopped || current.summaryRunning || activeView !== "summary") return;
+    current.summaryRunning = true;
+    try {
+      for (const module of current.summaryModules) {
+        if (current.stopped || activeView !== "summary") break;
+        if (current.summaryResults.has(module.id) || current.summaryFailed.has(module.id)) continue;
+        const outcome = await summarizeOne(current, module);
+        if (outcome?.code === "SETUP_REQUIRED") break;
+      }
+    } finally {
+      current.summaryRunning = false;
+    }
+  }
+
+  async function summarizeOne(current, module) {
+    if (current.stopped || current.summaryInFlight.has(module.id)) return null;
+    const body = summaryBody(module);
+    if (!body) return null;
+    current.summaryInFlight.add(module.id);
+    body.setAttribute("aria-busy", "true");
+    const pending = document.createElement("p");
+    pending.className = "yidu-summary-pending";
+    pending.textContent = "正在生成总结…";
+    body.replaceChildren(pending);
+    let outcome;
+    try {
+      outcome = await chrome.runtime.sendMessage({
+        type: "YIDU_SUMMARIZE_MODULE",
+        payload: { url: current.article.url, title: current.article.title, module }
+      });
+      if (current.stopped) return outcome;
+      if (!outcome?.ok) throw new Error(outcome?.message || "总结失败，请重试。");
+      current.summaryResults.set(module.id, outcome.result);
+      const details = body.parentElement;
+      details.querySelector("h2").textContent = outcome.result.title;
+      const original = document.createElement("p");
+      original.className = "yidu-summary-original";
+      original.textContent = module.title;
+      details.querySelector(".yidu-summary-original")?.remove();
+      details.insertBefore(original, body);
+      if (outcome.cached) current.summaryCachedCount += 1;
+      if (outcome.cacheSaved === false) current.summaryCacheError = true;
+      const summary = document.createElement("p");
+      summary.className = "yidu-summary-overview";
+      summary.textContent = outcome.result.summary;
+      const points = document.createElement("ul");
+      points.className = "yidu-summary-points";
+      for (const point of outcome.result.points) {
+        const item = document.createElement("li");
+        item.textContent = point;
+        points.append(item);
+      }
+      body.replaceChildren(summary, points);
+      updateSummaryProgress(current);
+    } catch (error) {
+      if (!current.stopped) {
+        current.summaryFailed.add(module.id);
+        const message = document.createElement("p");
+        message.className = "yidu-summary-failure";
+        message.textContent = error?.message || "总结失败，请重试。";
+        const actions = document.createElement("div");
+        actions.className = "yidu-actions";
+        if (outcome?.code === "SETUP_REQUIRED") {
+          const settings = document.createElement("button");
+          settings.className = "yidu-action secondary";
+          settings.type = "button";
+          settings.textContent = "打开设置";
+          settings.addEventListener("click", () => chrome.runtime.sendMessage({ type: "YIDU_OPEN_OPTIONS" }));
+          actions.append(settings);
+        }
+        const retry = document.createElement("button");
+        retry.className = "yidu-action secondary";
+        retry.type = "button";
+        retry.textContent = "重试";
+        retry.addEventListener("click", () => {
+          current.summaryFailed.delete(module.id);
+          void summarizeOne(current, module).then((result) => {
+            if (result?.ok) void runSummaries(current);
+          });
+        });
+        actions.append(retry);
+        body.replaceChildren(message, actions);
+      }
+    } finally {
+      current.summaryInFlight.delete(module.id);
+      body.removeAttribute("aria-busy");
+    }
+    return outcome;
   }
 
   function resetGlossaryForm() {
@@ -290,7 +414,9 @@ import { groupArticleModules } from "./lib/summary.js";
       }
       startSession(response.article, tab.id);
     } catch (error) {
-      showEmpty(error?.message || "无法读取当前页面。", true);
+      const message = error?.message || "无法读取当前页面。";
+      showEmpty(message, true);
+      showSummaryMessage(message);
     }
   }
 
@@ -357,6 +483,14 @@ import { groupArticleModules } from "./lib/summary.js";
       failed: false,
       failedSegments: [],
       cachedCount: 0,
+      summaryModules: [],
+      summaryResults: new Map(),
+      summaryFailed: new Set(),
+      summaryInFlight: new Set(),
+      summaryRunning: false,
+      summaryCachedCount: 0,
+      summaryCacheError: false,
+      summaryProgress: null,
       selectedSegmentIds: new Set(),
       glossaryEpoch: 0
     };

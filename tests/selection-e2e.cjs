@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
 const longText = "Long article paragraph with many sentences about evaluating autonomous agents. ".repeat(30);
-const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1><span aria-hidden="true">:</span><span>Claude Fable 5.1 and Mythos 5.1</span></h1><h2 id="agents-heading">:Demystifying evals for AI agents</h2><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p id="plural">Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1><span aria-hidden="true">:</span><span>Claude Fable 5.1 and Mythos 5.1</span></h1><h2 id="agents-heading">:Demystifying evals for AI agents</h2><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p id="plural">Good evaluations help teams ship agents more confidently.</p><h2 id="conclusion-heading">Conclusion</h2><p id="long">' + longText + '</p></main></body></html>';
 const server = http.createServer((_request, response) => {
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
@@ -39,6 +39,26 @@ const server = http.createServer((_request, response) => {
       globalThis.fetch = async (_url, options) => {
         const request = JSON.parse(options.body);
         if (request.response_format) {
+          if (request.messages[0].content.includes("英文技术文章总结助手")) {
+            globalThis.yiduSummaryRequests = (globalThis.yiduSummaryRequests || 0) + 1;
+            const input = JSON.parse(request.messages[1].content);
+            globalThis.yiduSummaryInput = input;
+            if (input.moduleTitle === "Demystifying evals for AI agents" && globalThis.yiduSlowFirstSummary) {
+              globalThis.yiduSlowFirstSummary = false;
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+            if (input.moduleTitle === "Conclusion" && globalThis.yiduFailConclusion) {
+              globalThis.yiduFailConclusion = false;
+              return new Response(JSON.stringify({ error: { message: "临时总结失败" } }), { status: 503 });
+            }
+            return new Response(JSON.stringify({
+              choices: [{ message: { content: JSON.stringify({
+                title: input.moduleTitle === "Conclusion" ? "结论" : "评测入门",
+                summary: "概述：" + input.moduleTitle,
+                points: ["评测方法", "实践限制"]
+              }) } }]
+            }), { status: 200 });
+          }
           if (globalThis.yiduFailNextBatch) {
             globalThis.yiduFailNextBatch = false;
             return new Response(JSON.stringify({ error: { message: "临时连接失败" } }), { status: 503 });
@@ -83,9 +103,56 @@ const server = http.createServer((_request, response) => {
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
     assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
     assert.equal(await panel.locator("#term-toggle").count(), 0);
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 0,
+      "打开总结页签前不得发送文章总结请求");
+    await worker.evaluate(() => {
+      globalThis.yiduFailConclusion = true;
+      globalThis.yiduSlowFirstSummary = true;
+    });
     await panel.locator("#tab-summary").click();
-    assert.equal(await panel.locator("#view-summary .yidu-summary-module").count(), 1);
-    assert.match(await panel.locator("#view-summary").textContent(), /导读|Demystifying evals/);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-module").count(), 2);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (await worker.evaluate(() => globalThis.yiduSummaryRequests || 0)) break;
+      await page.waitForTimeout(25);
+    }
+    await panel.locator("#tab-translation").click();
+    await page.waitForTimeout(650);
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 1,
+      "离开总结页签后不得开始下一个模块请求");
+    await panel.locator("#tab-summary").click();
+    await panel.locator("#view-summary .yidu-summary-overview").filter({
+      hasText: "概述：Demystifying evals for AI agents"
+    }).waitFor();
+    const conclusion = panel.locator("#view-summary .yidu-summary-module").filter({ hasText: "Conclusion" });
+    await conclusion.locator(".yidu-summary-failure").filter({ hasText: "临时总结失败" }).waitFor();
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 2);
+    await conclusion.getByText("重试").click();
+    await conclusion.locator(".yidu-summary-overview").filter({ hasText: "概述：Conclusion" }).waitFor();
+    assert.equal(await conclusion.locator("h2").textContent(), "结论");
+    assert.equal(await conclusion.locator(".yidu-summary-original").textContent(), "Conclusion");
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 3);
+    const summaryInput = await worker.evaluate(() => globalThis.yiduSummaryInput);
+    assert.ok(summaryInput.segments.length > 1);
+    assert.equal(summaryInput.url, undefined);
+    assert.equal(summaryInput.glossary, undefined);
+    const summaryCache = await worker.evaluate(async () =>
+      (await chrome.storage.local.get("yiduSummaryCacheV1")).yiduSummaryCacheV1);
+    assert.equal(Object.keys(summaryCache.entries).length, 2);
+    await panel.locator("#tab-translation").click();
+    await panel.locator("#tab-summary").click();
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 3,
+      "返回已生成的总结页签不应再次请求模型");
+    await panel.reload();
+    await panel.locator("#tab-summary").click();
+    await panel.locator("#view-summary .yidu-summary-overview").first().waitFor();
+    await panel.locator("#view-summary .yidu-summary-overview").nth(1).waitFor();
+    assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 3,
+      "重载侧栏后应复用本地总结缓存");
+    if (process.env.YIDU_SUMMARY_SCREENSHOT) {
+      await panel.setViewportSize({ width: 460, height: 900 });
+      await panel.screenshot({ path: process.env.YIDU_SUMMARY_SCREENSHOT });
+      await panel.setViewportSize({ width: 1280, height: 720 });
+    }
     await panel.locator("#tab-glossary").click();
     if (process.env.YIDU_PANEL_TABS_SCREENSHOT) {
       await panel.setViewportSize({ width: 460, height: 900 });

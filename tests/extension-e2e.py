@@ -57,6 +57,15 @@ try:
                         globalThis.__yiduFetchCalls += 1;
                         const request = JSON.parse(options.body);
                         const input = JSON.parse(request.messages[1].content);
+                        if (request.messages[0].content.includes("英文技术文章总结助手")) {
+                          return new Response(JSON.stringify({
+                            choices: [{ message: { content: JSON.stringify({
+                              title: "评测基础",
+                              summary: "该模块概述。",
+                              points: ["主要方法", "实践限制"]
+                            }) } }]
+                          }), { status: 200, headers: { "Content-Type": "application/json" } });
+                        }
                         const items = input.segments.map((segment) => {
                           const markup = String(segment.markup || segment.text)
                             .replaceAll("AI agent", "AI 智能体")
@@ -109,6 +118,7 @@ try:
                     assert rich.locator("mark.yidu-term").count() == 0
                     panel.get_by_role("tab", name="AI 总结").click()
                     assert panel.locator("#view-summary .yidu-summary-module").count() > 0
+                    panel.locator("#view-summary .yidu-summary-overview").first.wait_for(state="visible")
                     panel.get_by_role("tab", name="固定译法库").click()
                     panel.locator("#glossary-list").wait_for(state="visible")
                     panel.get_by_role("tab", name="中文翻译").click()

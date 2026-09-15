@@ -10,9 +10,11 @@ import {
   getDefaultModel,
   parseTranslationResponse
 } from "./lib/translation.js";
+import { SUMMARY_STORAGE_KEY, buildSummaryMessages, makeSummaryKey, parseSummaryResponse, readCachedSummary, saveCachedSummary } from "./lib/summary.js";
 
 let cacheWriteChain = Promise.resolve();
 let glossaryWriteChain = Promise.resolve();
+let summaryWriteChain = Promise.resolve();
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
 
@@ -30,6 +32,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     YIDU_GLOSSARY_UPSERT: saveGlossaryEntry,
     YIDU_GLOSSARY_GET: getGlossaryEntries,
     YIDU_GLOSSARY_DELETE: deleteGlossaryEntry,
+    YIDU_SUMMARIZE_MODULE: summarizeModule,
     YIDU_CACHE_GET: getCachedTranslations,
     YIDU_CACHE_PUT: putCachedTranslations
   };
@@ -186,6 +189,56 @@ function deleteGlossaryEntry(payload) {
     }
   });
   return glossaryWriteChain;
+}
+
+async function summarizeModule(payload) {
+  try {
+    const module = payload?.module;
+    const segments = module?.segments;
+    if (!Array.isArray(segments) || !segments.length ||
+      segments.some((segment) => typeof segment?.text !== "string" || !segment.text.trim()) ||
+      segments.reduce((count, segment) => count + segment.text.length, 0) > 10000) {
+      return { ok: false, message: "当前模块内容无法总结。" };
+    }
+    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", SUMMARY_STORAGE_KEY]);
+    const model = settings.deepseekModel || getDefaultModel();
+    const key = makeSummaryKey(payload?.url, module, model, payload?.title);
+    const cached = readCachedSummary(settings[SUMMARY_STORAGE_KEY], key);
+    if (cached) return { ok: true, result: cached, cached: true };
+    if (!settings.deepseekApiKey) {
+      return { ok: false, code: "SETUP_REQUIRED", message: "请先在设置中填写 DeepSeek API Key。" };
+    }
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + settings.deepseekApiKey
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 1200,
+        response_format: { type: "json_object" },
+        messages: buildSummaryMessages({ articleTitle: payload?.title, module })
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.error?.message || "DeepSeek 请求失败（" + response.status + "）");
+    }
+    const body = await response.json();
+    const result = parseSummaryResponse(body?.choices?.[0]?.message?.content);
+    summaryWriteChain = summaryWriteChain.catch(() => undefined).then(async () => {
+      const stored = await chrome.storage.local.get(SUMMARY_STORAGE_KEY);
+      await chrome.storage.local.set({
+        [SUMMARY_STORAGE_KEY]: saveCachedSummary(stored[SUMMARY_STORAGE_KEY], key, result)
+      });
+    });
+    const cacheSaved = await summaryWriteChain.then(() => true, () => false);
+    return { ok: true, result, cached: false, cacheSaved };
+  } catch (error) {
+    return { ok: false, code: "SUMMARY_FAILED", message: error?.message || "总结失败，请重试。" };
+  }
 }
 
 async function selectionAction(payload) {

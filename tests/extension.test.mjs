@@ -80,6 +80,8 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /className = "yidu-emphasis"/);
   assert.match(panelHtml, /role="tablist"/);
   assert.match(panelScript, /groupArticleModules/);
+  assert.match(background, /YIDU_SUMMARIZE_MODULE/);
+  assert.match(panelScript, /YIDU_SUMMARIZE_MODULE/);
   assert.match(panelScript, /YIDU_GLOSSARY_GET/);
   assert.match(panelScript, /YIDU_GLOSSARY_DELETE/);
   assert.doesNotMatch(panelScript, /highlightedText|termsVisible|term-toggle/);
