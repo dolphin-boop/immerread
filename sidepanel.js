@@ -1,25 +1,52 @@
 import { containsTerm } from "./lib/glossary.js";
+import { groupArticleModules } from "./lib/summary.js";
 
 (() => {
   const BATCH_SIZE = 4;
   const VIEWPORT_MARGIN = "520px 0px";
   const content = document.getElementById("content");
   const status = document.getElementById("status");
-  const toggle = document.getElementById("term-toggle");
+  const summaryContent = document.getElementById("summary-content");
+  const glossaryForm = document.getElementById("glossary-form");
+  const glossarySource = document.getElementById("glossary-source");
+  const glossaryTarget = document.getElementById("glossary-target");
+  const glossaryList = document.getElementById("glossary-list");
+  const glossaryStatus = document.getElementById("glossary-status");
+  const glossaryCancel = document.getElementById("glossary-cancel");
+  const views = {
+    translation: document.getElementById("view-translation"),
+    summary: document.getElementById("view-summary"),
+    glossary: document.getElementById("view-glossary")
+  };
+  const tabs = {
+    translation: document.getElementById("tab-translation"),
+    summary: document.getElementById("tab-summary"),
+    glossary: document.getElementById("tab-glossary")
+  };
+  let activeView = "translation";
+  let editingSource = "";
   let session = null;
   let reloadTimer = 0;
 
   document.getElementById("settings").addEventListener("click", () => {
     chrome.runtime.sendMessage({ type: "YIDU_OPEN_OPTIONS" });
   });
-  toggle.addEventListener("click", () => {
-    const enabled = toggle.getAttribute("aria-checked") !== "true";
-    toggle.setAttribute("aria-checked", String(enabled));
-    if (session) {
-      session.termsVisible = enabled;
-      for (const [id, item] of session.translations) renderTranslation(session, id, item);
-    }
-  });
+  for (const [name, tab] of Object.entries(tabs)) {
+    tab.addEventListener("click", () => selectView(name));
+    tab.addEventListener("keydown", (event) => {
+      const names = Object.keys(tabs);
+      const index = names.indexOf(name);
+      const next = event.key === "ArrowRight" ? names[(index + 1) % names.length]
+        : event.key === "ArrowLeft" ? names[(index + names.length - 1) % names.length]
+        : event.key === "Home" ? names[0] : event.key === "End" ? names[names.length - 1] : "";
+      if (!next) return;
+      event.preventDefault();
+      selectView(next);
+      tabs[next].focus();
+    });
+  }
+  glossaryForm.addEventListener("submit", saveGlossaryFromForm);
+  glossaryCancel.addEventListener("click", resetGlossaryForm);
   chrome.tabs.onActivated.addListener(scheduleReload);
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (changeInfo.status === "complete" && tab.active) scheduleReload();
@@ -33,6 +60,150 @@ import { containsTerm } from "./lib/glossary.js";
 
   void loadActiveArticle();
 
+  function selectView(name) {
+    activeView = name;
+    for (const [key, view] of Object.entries(views)) {
+      const selected = key === name;
+      view.hidden = !selected;
+      tabs[key].setAttribute("aria-selected", String(selected));
+      tabs[key].tabIndex = selected ? 0 : -1;
+    }
+    if (name === "glossary") void loadGlossaryEntries();
+    if (name === "summary" && !summaryContent.childElementCount) {
+      showSummaryMessage("请先打开一篇英文网页文章。");
+    }
+  }
+
+  function showSummaryMessage(message) {
+    const note = document.createElement("p");
+    note.className = "yidu-summary-note";
+    note.textContent = message;
+    summaryContent.replaceChildren(note);
+  }
+
+  function renderSummaryOutline(current) {
+    const modules = groupArticleModules(current.article);
+    current.summaryModules = modules;
+    summaryContent.replaceChildren();
+    const title = document.createElement("h1");
+    title.className = "yidu-summary-title";
+    title.textContent = current.article.title;
+    const intro = document.createElement("p");
+    intro.className = "yidu-view-intro";
+    intro.textContent = modules.length + " 个大模块";
+    const notice = document.createElement("p");
+    notice.className = "yidu-summary-note";
+    notice.textContent = "AI 总结服务待启用。";
+    summaryContent.append(title, intro, notice);
+    for (const [index, module] of modules.entries()) {
+      const section = document.createElement("section");
+      section.className = "yidu-summary-module";
+      section.dataset.moduleId = module.id;
+      const number = document.createElement("span");
+      number.className = "yidu-summary-number";
+      number.textContent = String(index + 1).padStart(2, "0");
+      const heading = document.createElement("h2");
+      heading.textContent = module.title;
+      section.append(number, heading);
+      summaryContent.append(section);
+    }
+  }
+
+  function resetGlossaryForm() {
+    editingSource = "";
+    glossaryForm.reset();
+    glossarySource.readOnly = false;
+    glossaryCancel.hidden = true;
+    glossaryForm.querySelector('button[type="submit"]').textContent = "保存译法";
+  }
+
+  async function saveGlossaryFromForm(event) {
+    event.preventDefault();
+    const button = glossaryForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    glossaryStatus.textContent = "正在保存…";
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: "YIDU_GLOSSARY_UPSERT",
+        payload: { source: editingSource || glossarySource.value, target: glossaryTarget.value }
+      });
+      if (!result?.ok) throw new Error(result?.message || "保存失败");
+      resetGlossaryForm();
+      await loadGlossaryEntries();
+      glossaryStatus.textContent = "固定译法已保存。";
+    } catch (error) {
+      glossaryStatus.textContent = error?.message || "保存失败，请重试。";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function loadGlossaryEntries() {
+    try {
+      const result = await chrome.runtime.sendMessage({ type: "YIDU_GLOSSARY_GET" });
+      if (!result?.ok) throw new Error(result?.message || "读取失败");
+      glossaryList.replaceChildren();
+      const entries = (result.entries || []).sort((left, right) =>
+        left.source.toLocaleLowerCase().localeCompare(right.source.toLocaleLowerCase()));
+      if (!entries.length) {
+        const empty = document.createElement("p");
+        empty.className = "yidu-glossary-empty";
+        empty.textContent = "还没有固定译法。可在这里添加，也可在原网页选词后保存。";
+        glossaryList.append(empty);
+      }
+      for (const entry of entries) {
+        const row = document.createElement("div");
+        row.className = "yidu-glossary-entry";
+        const words = document.createElement("div");
+        words.className = "yidu-glossary-words";
+        const source = document.createElement("strong");
+        source.textContent = entry.source;
+        const arrow = document.createElement("span");
+        arrow.textContent = "→";
+        const target = document.createElement("span");
+        target.textContent = entry.target;
+        words.append(source, arrow, target);
+        const actions = document.createElement("div");
+        actions.className = "yidu-glossary-actions";
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "编辑";
+        edit.addEventListener("click", () => {
+          editingSource = entry.source;
+          glossarySource.value = entry.source;
+          glossarySource.readOnly = true;
+          glossaryTarget.value = entry.target;
+          glossaryCancel.hidden = false;
+          glossaryForm.querySelector('button[type="submit"]').textContent = "更新译法";
+          glossaryTarget.focus();
+        });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "删除";
+        remove.addEventListener("click", async () => {
+          remove.disabled = true;
+          const result = await chrome.runtime.sendMessage({
+            type: "YIDU_GLOSSARY_DELETE",
+            payload: { source: entry.source }
+          }).catch(() => null);
+          if (result?.ok) {
+            if (editingSource.toLocaleLowerCase() === entry.source.toLocaleLowerCase()) resetGlossaryForm();
+            await loadGlossaryEntries();
+            glossaryStatus.textContent = "固定译法已删除。";
+          } else {
+            glossaryStatus.textContent = result?.message || "删除失败，请重试。";
+            remove.disabled = false;
+          }
+        });
+        actions.append(edit, remove);
+        row.append(words, actions);
+        glossaryList.append(row);
+      }
+    } catch (error) {
+      glossaryStatus.textContent = error?.message || "读取固定译法失败。";
+    }
+  }
+
   function scheduleReload() {
     window.clearTimeout(reloadTimer);
     reloadTimer = window.setTimeout(() => void loadActiveArticle(), 120);
@@ -42,7 +213,7 @@ import { containsTerm } from "./lib/glossary.js";
     const current = session;
     if (!current || current.stopped || tabId !== current.tabId) return;
     const row = current.rows.get(String(payload?.segmentId || ""));
-    if (!row) return;
+    if (!row || activeView !== "translation") return;
     const index = current.article.segments.findIndex((segment) => segment.id === row.dataset.segmentId);
     current.article.segments.slice(index, index + BATCH_SIZE).forEach((segment) => enqueue(current, segment));
     requestAnimationFrame(() => {
@@ -68,7 +239,7 @@ import { containsTerm } from "./lib/glossary.js";
     for (const id of ids) current.rows.get(id)?.classList.add("yidu-source-selected");
     current.selectedSegmentIds = ids;
     const first = current.rows.get(ids.values().next().value);
-    if (first) {
+    if (first && activeView === "translation") {
       requestAnimationFrame(() => {
         if (!current.stopped && current.selectedSegmentIds.has(first.dataset.segmentId)) {
           first.scrollIntoView({ block: "center", behavior: "auto" });
@@ -77,9 +248,14 @@ import { containsTerm } from "./lib/glossary.js";
     }
   }
   function handleGlossaryChanged(payload) {
+    if (activeView === "glossary") void loadGlossaryEntries();
     const current = session;
     const source = String(payload?.source || "").trim();
     if (!current || current.stopped || !source) return;
+    for (const key of Object.keys(current.glossary)) {
+      if (key.toLocaleLowerCase() === source.toLocaleLowerCase()) delete current.glossary[key];
+    }
+    if (payload?.target) current.glossary[source] = String(payload.target);
     current.glossaryEpoch += 1;
     if (current.failed) {
       current.failed = false;
@@ -104,6 +280,7 @@ import { containsTerm } from "./lib/glossary.js";
     setStatus("正在读取文章…");
     content.setAttribute("aria-busy", "true");
     content.replaceChildren();
+    summaryContent.replaceChildren();
     try {
       const tab = await findArticleTab();
       if (!tab?.id) throw new Error("请先打开一篇英文网页文章。");
@@ -180,12 +357,12 @@ import { containsTerm } from "./lib/glossary.js";
       failed: false,
       failedSegments: [],
       cachedCount: 0,
-      termsVisible: false,
       selectedSegmentIds: new Set(),
       glossaryEpoch: 0
     };
     session = next;
     renderArticle(next);
+    renderSummaryOutline(next);
     void restoreCache(next).then(() => {
       if (next.stopped) return;
       startViewportTranslation(next);
@@ -327,7 +504,7 @@ import { containsTerm } from "./lib/glossary.js";
     const row = current.rows.get(id);
     const segment = current.segmentsById.get(id);
     if (!row || !segment) return;
-    const fragment = buildSafeFragment(item.translation, segment, current.termsVisible ? item.terms : []);
+    const fragment = buildSafeFragment(item.translation, segment);
     if (/^h[1-6]$/.test(segment.kind)) cleanHeadingFragment(fragment);
     row.replaceChildren(fragment);
     if (current.completed.has(id)) {
@@ -347,19 +524,19 @@ import { containsTerm } from "./lib/glossary.js";
     }
   }
 
-  function buildSafeFragment(markup, segment, terms) {
+  function buildSafeFragment(markup, segment) {
     const template = document.createElement("template");
     template.innerHTML = String(markup || "");
     const fragment = document.createDocumentFragment();
     for (const node of template.content.childNodes) {
-      const safe = sanitizeNode(node, segment, terms);
+      const safe = sanitizeNode(node, segment);
       if (safe) fragment.append(safe);
     }
     return fragment;
   }
 
-  function sanitizeNode(node, segment, terms) {
-    if (node.nodeType === Node.TEXT_NODE) return highlightedText(node.nodeValue || "", terms);
+  function sanitizeNode(node, segment) {
+    if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || "");
     if (node.nodeType !== Node.ELEMENT_NODE) return null;
     const tag = node.tagName.toLowerCase();
     if (tag === "script" || tag === "style") return null;
@@ -374,56 +551,21 @@ import { containsTerm } from "./lib/glossary.js";
     else if (tag === "a") {
       const linkIndex = node.getAttribute("data-link");
       const href = /^\d+$/.test(linkIndex || "") ? segment.links?.[Number(linkIndex)] : "";
-      if (!href) return copyChildren(node, document.createDocumentFragment(), segment, terms);
+      if (!href) return copyChildren(node, document.createDocumentFragment(), segment);
       element = document.createElement("a");
       element.href = href;
       element.target = "_blank";
       element.rel = "noopener noreferrer";
-    } else return copyChildren(node, document.createDocumentFragment(), segment, terms);
-    return copyChildren(node, element, segment, terms);
+    } else return copyChildren(node, document.createDocumentFragment(), segment);
+    return copyChildren(node, element, segment);
   }
 
-  function copyChildren(source, target, segment, terms) {
+  function copyChildren(source, target, segment) {
     for (const child of source.childNodes) {
-      const safe = sanitizeNode(child, segment, terms);
+      const safe = sanitizeNode(child, segment);
       if (safe) target.append(safe);
     }
     return target;
-  }
-
-  function highlightedText(text, terms) {
-    const fragment = document.createDocumentFragment();
-    const matches = [];
-    for (const term of terms || []) {
-      const needle = String(term?.target || "").trim();
-      if (!needle) continue;
-      const lowerText = text.toLocaleLowerCase();
-      const lowerNeedle = needle.toLocaleLowerCase();
-      let from = 0;
-      while (from < text.length) {
-        const index = lowerText.indexOf(lowerNeedle, from);
-        if (index < 0) break;
-        matches.push({ start: index, end: index + needle.length });
-        from = index + needle.length;
-      }
-    }
-    matches.sort((left, right) => left.start - right.start || right.end - right.start - (left.end - left.start));
-    const accepted = [];
-    for (const match of matches) {
-      if (!accepted.some((item) => match.start < item.end && match.end > item.start)) accepted.push(match);
-    }
-    accepted.sort((left, right) => left.start - right.start);
-    let cursor = 0;
-    for (const match of accepted) {
-      fragment.append(document.createTextNode(text.slice(cursor, match.start)));
-      const mark = document.createElement("mark");
-      mark.className = "yidu-term";
-      mark.textContent = text.slice(match.start, match.end);
-      fragment.append(mark);
-      cursor = match.end;
-    }
-    fragment.append(document.createTextNode(text.slice(cursor)));
-    return fragment;
   }
 
   function showError(current, message, setupRequired) {

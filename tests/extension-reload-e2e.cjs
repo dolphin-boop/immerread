@@ -103,9 +103,7 @@ const server = http.createServer((_request, response) => {
     await panel.setViewportSize({ width: 420, height: 720 });
     await panel.goto(extensionOrigin + "/sidepanel.html", { waitUntil: "domcontentloaded" });
     await panel.locator(".yidu-segment").first().waitFor({ state: "visible", timeout: 10_000 });
-    await panel.waitForFunction(
-      'document.querySelector(".yidu-segment[data-translated=\\"true\\"]")'
-    );
+    await panel.waitForFunction(() => document.querySelectorAll('.yidu-segment[data-translated="true"]').length >= 4);
 
     assert.equal(await panel.locator(".yidu-segment").count(), 96);
     assert.equal(await panel.getByText("Could not establish connection").count(), 0);

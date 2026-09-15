@@ -52,7 +52,10 @@ test("extracts article semantics without rebuilding the source page", () => {
 
 test("renders progressive rich translations in the side panel", () => {
   assert.match(panelHtml, />中文翻译</);
-  assert.match(panelHtml, /AI 术语高亮/);
+  assert.doesNotMatch(panelHtml, /AI 术语高亮|term-toggle/);
+  assert.match(panelHtml, /tab-summary/);
+  assert.match(panelHtml, /tab-glossary/);
+  assert.match(panelHtml, /glossary-form/);
   assert.doesNotMatch(panelHtml, /当前位置|已读/);
   assert.match(panelScript, /IntersectionObserver/);
   assert.match(panelScript, /handleSourceScroll/);
@@ -75,11 +78,16 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /document\.createElement\("u"\)/);
   assert.match(panelScript, /document\.createElement\("a"\)/);
   assert.match(panelScript, /className = "yidu-emphasis"/);
-  assert.match(panelHtml, /role="switch" aria-checked="false"/);
+  assert.match(panelHtml, /role="tablist"/);
+  assert.match(panelScript, /groupArticleModules/);
+  assert.match(panelScript, /YIDU_GLOSSARY_GET/);
+  assert.match(panelScript, /YIDU_GLOSSARY_DELETE/);
+  assert.doesNotMatch(panelScript, /highlightedText|termsVisible|term-toggle/);
 });
 
 test("keeps the panel readable and avoids prohibited visual shortcuts", () => {
   assert.match(panelStyles, /\.yidu-h1/);
+  assert.doesNotMatch(panelStyles, /\.yidu-term\{|\.yidu-term-toggle/);
   assert.match(panelStyles, /\.yidu-blockquote/);
   assert.match(panelStyles, /\.yidu-list/);
   assert.match(panelStyles, /\.yidu-segment\.yidu-source-selected\{background:#f3e7da;border-radius:7px/);

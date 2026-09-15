@@ -1,5 +1,5 @@
 import { buildSelectionMessages, cleanSelectionResponse } from "./lib/selection.js";
-import { GLOSSARY_STORAGE_KEY, glossaryForSegments, missingFixedTerms, prepareFixedTermRetry, restoreFixedTermRetry, upsertGlossary } from "./lib/glossary.js";
+import { GLOSSARY_STORAGE_KEY, glossaryForSegments, missingFixedTerms, prepareFixedTermRetry, restoreFixedTermRetry, removeGlossaryEntry, upsertGlossary } from "./lib/glossary.js";
 import {
   CACHE_STORAGE_KEY,
   mergeCachedItems,
@@ -28,6 +28,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     YIDU_TRANSLATE_BATCH: translateBatch,
     YIDU_SELECTION_ACTION: selectionAction,
     YIDU_GLOSSARY_UPSERT: saveGlossaryEntry,
+    YIDU_GLOSSARY_GET: getGlossaryEntries,
+    YIDU_GLOSSARY_DELETE: deleteGlossaryEntry,
     YIDU_CACHE_GET: getCachedTranslations,
     YIDU_CACHE_PUT: putCachedTranslations
   };
@@ -156,6 +158,31 @@ function saveGlossaryEntry(payload) {
       return { ok: true, entry: updated.entries[String(payload.source).trim().toLocaleLowerCase()] };
     } catch (error) {
       return { ok: false, message: error?.message || "保存指定译法失败，请重试。" };
+    }
+  });
+  return glossaryWriteChain;
+}
+
+async function getGlossaryEntries() {
+  await glossaryWriteChain.catch(() => undefined);
+  const stored = await chrome.storage.local.get(GLOSSARY_STORAGE_KEY);
+  return { ok: true, entries: Object.values(stored[GLOSSARY_STORAGE_KEY]?.entries || {}) };
+}
+
+function deleteGlossaryEntry(payload) {
+  glossaryWriteChain = glossaryWriteChain.catch(() => undefined).then(async () => {
+    try {
+      const stored = await chrome.storage.local.get(GLOSSARY_STORAGE_KEY);
+      const { glossary, removed } = removeGlossaryEntry(stored[GLOSSARY_STORAGE_KEY], payload?.source);
+      if (!removed) return { ok: false, message: "这条固定译法已不存在。" };
+      await chrome.storage.local.set({ [GLOSSARY_STORAGE_KEY]: glossary });
+      void chrome.runtime.sendMessage({
+        type: "YIDU_GLOSSARY_CHANGED",
+        payload: { source: removed.source, target: null }
+      }).catch(() => undefined);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, message: error?.message || "删除固定译法失败，请重试。" };
     }
   });
   return glossaryWriteChain;

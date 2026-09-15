@@ -82,6 +82,27 @@ const server = http.createServer((_request, response) => {
     await panel.locator(".yidu-skipped").first().waitFor();
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
     assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
+    assert.equal(await panel.locator("#term-toggle").count(), 0);
+    await panel.locator("#tab-summary").click();
+    assert.equal(await panel.locator("#view-summary .yidu-summary-module").count(), 1);
+    assert.match(await panel.locator("#view-summary").textContent(), /导读|Demystifying evals/);
+    await panel.locator("#tab-glossary").click();
+    if (process.env.YIDU_PANEL_TABS_SCREENSHOT) {
+      await panel.setViewportSize({ width: 460, height: 900 });
+      await panel.screenshot({ path: process.env.YIDU_PANEL_TABS_SCREENSHOT });
+      await panel.setViewportSize({ width: 1280, height: 720 });
+    }
+    await panel.locator("#glossary-source").fill("transformer");
+    await panel.locator("#glossary-target").fill("变换器");
+    await panel.locator("#glossary-form button[type=submit]").click();
+    await panel.locator("#glossary-list .yidu-glossary-entry").filter({ hasText: "transformer" }).waitFor();
+    await panel.locator("#glossary-list .yidu-glossary-entry").filter({ hasText: "transformer" }).getByText("编辑").click();
+    await panel.locator("#glossary-target").fill("Transformer 模型");
+    await panel.locator("#glossary-form button[type=submit]").click();
+    await panel.locator("#glossary-list .yidu-glossary-entry").filter({ hasText: "Transformer 模型" }).waitFor();
+    await panel.locator("#glossary-list .yidu-glossary-entry").filter({ hasText: "transformer" }).getByText("删除").click();
+    await panel.locator("#glossary-list .yidu-glossary-entry").waitFor({ state: "detached" });
+    await panel.locator("#tab-translation").click();
     assert.equal(await panel.locator(".yidu-skipped").count(), 2);
     assert.equal(await panel.locator(".yidu-skipped").first().getAttribute("aria-busy"), null);
     assert.match(await panel.locator(".yidu-skipped").first().textContent(), /复杂模块保留在原文中/);
@@ -232,6 +253,15 @@ const server = http.createServer((_request, response) => {
     assert.ok(await worker.evaluate(() => globalThis.yiduProtectedRetries > 0), "模型首次忽略固定译法时应以占位符重试");
     assert.equal((await worker.evaluate(async () => (await chrome.storage.local.get("yiduGlossaryV1")).yiduGlossaryV1)).entries.agents.target, "agents");
     await page.locator("#yidu-selection-root .yidu-close").click();
+    await panel.locator("#tab-glossary").click();
+    const agentsEntry = panel.locator(".yidu-glossary-entry").filter({
+      has: panel.locator(".yidu-glossary-words strong").getByText("agents", { exact: true })
+    });
+    await agentsEntry.getByText("删除").click();
+    await agentsEntry.waitFor({ state: "detached" });
+    await panel.locator("#tab-translation").click();
+    await panel.locator('.yidu-segment[data-segment-id="' + headingId + '"]')
+      .filter({ hasText: "新术语译文：Demystifying evals for AI agents" }).waitFor();
     await worker.evaluate(async () => chrome.storage.local.remove("deepseekApiKey"));
     await selectIntro();
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();

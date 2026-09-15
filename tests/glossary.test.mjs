@@ -8,6 +8,7 @@ import {
   prepareFixedTermRetry,
   restoreFixedTermRetry,
   normalizeGlossaryEntry,
+  removeGlossaryEntry,
   segmentGlossarySignature,
   upsertGlossary
 } from "../lib/glossary.js";
@@ -18,6 +19,14 @@ test("saves and updates user-confirmed translations case-insensitively", () => {
   assert.equal(Object.keys(second.entries).length, 1);
   assert.equal(second.entries["ai agent"].target, "AI 代理体");
   assert.equal(second.entries["ai agent"].updatedAt, 200);
+});
+
+test("removes only the selected user-maintained fixed translation", () => {
+  const glossary = upsertGlossary(upsertGlossary({}, "agent", "智能体"), "model", "模型");
+  const { glossary: remaining, removed } = removeGlossaryEntry(glossary, "AGENT");
+  assert.equal(removed.target, "智能体");
+  assert.deepEqual(Object.keys(remaining.entries), ["model"]);
+  assert.equal(removeGlossaryEntry(remaining, "missing").removed, null);
 });
 
 test("rejects sentences and empty user translations", () => {
