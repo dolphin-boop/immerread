@@ -177,7 +177,7 @@
         current.completed.add(segment.id);
       }
       element.dataset.segmentId = segment.id;
-      element.setAttribute("aria-busy", "true");
+      if (segment.kind !== "skipped") element.setAttribute("aria-busy", "true");
       current.rows.set(segment.id, element);
     }
     content.setAttribute("aria-busy", "false");

@@ -55,11 +55,14 @@
       }
       const semanticParent = node.parentElement?.closest("blockquote, li");
       if (semanticParent && semanticParent !== node) continue;
-      const prepared = prepareBlock(node);
-      const text = readableText(prepared);
-      if (text.length < 2) continue;
       const kind = getBlockKind(node);
-      const serialized = serializeInline(prepared);
+      const prepared = prepareBlock(node);
+      const accessibleTitle = kind === "h1" ? node.getAttribute("aria-label")?.trim() : "";
+      const text = accessibleTitle || readableText(prepared);
+      if (text.length < 2) continue;
+      const serialized = accessibleTitle
+        ? { markup: escapeHtml(accessibleTitle), links: [] }
+        : serializeInline(prepared);
       const chunks = text.length > MAX_SEGMENT_CHARS
         ? splitOversizedText(text).map((chunk) => ({ text: chunk, markup: escapeHtml(chunk), links: [] }))
         : [{ text, markup: serialized.markup, links: serialized.links }];
@@ -110,22 +113,31 @@
   }
   function findComplexModule(node, container) {
     let parent = node.parentElement;
+    let componentRoot = null;
+    let layoutRoot = null;
     while (parent && parent !== container && parent !== document.body) {
-      if (parent.matches("table, [role='table'], [role='grid']")) return parent;
-      const style = getComputedStyle(parent);
-      const children = [...parent.children].filter((child) => readableText(child).length > 25);
-      if (children.length >= 2 && readableText(parent).length > 100 &&
-        (style.display === "grid" || style.display === "flex") &&
-        children.some((child, index) => index > 0 &&
-          Math.abs(child.getBoundingClientRect().left - children[0].getBoundingClientRect().left) > 40 &&
-          Math.abs(child.getBoundingClientRect().top - children[0].getBoundingClientRect().top) < 80)) {
-        return parent;
+      if (parent.matches("table, [role='table'], [role='grid']")) {
+        layoutRoot ||= parent;
+      }
+      if (parent.matches("[aria-roledescription='carousel']") ||
+        /carousel|slider|gallery|chart|graph|interactive/i.test(String(parent.className || ""))) {
+        componentRoot = parent;
+      }
+      if (!layoutRoot) {
+        const style = getComputedStyle(parent);
+        const children = [...parent.children].filter((child) => readableText(child).length > 25);
+        if (children.length >= 2 && readableText(parent).length > 100 &&
+          (style.display === "grid" || style.display === "flex") &&
+          children.some((child, index) => index > 0 &&
+            Math.abs(child.getBoundingClientRect().left - children[0].getBoundingClientRect().left) > 40 &&
+            Math.abs(child.getBoundingClientRect().top - children[0].getBoundingClientRect().top) < 80)) {
+          layoutRoot = parent;
+        }
       }
       parent = parent.parentElement;
     }
-    return null;
+    return componentRoot || layoutRoot;
   }
-
   function prepareBlock(node) {
     const clone = node.cloneNode(true);
     if (node.matches("li")) clone.querySelectorAll("ul, ol").forEach((list) => list.remove());

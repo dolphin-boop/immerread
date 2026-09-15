@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
-const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><article><h1>AI agent evaluation</h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p></article></main></body></html>';
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p></main></body></html>';
 const server = http.createServer((_request, response) => {
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
@@ -55,15 +55,23 @@ const server = http.createServer((_request, response) => {
       return chrome.tabs.sendMessage(tab.id, { type: "YIDU_GET_ARTICLE" });
     });
     assert.ok(extracted.ok);
-    assert.equal(extracted.article.segments.filter((segment) => segment.kind === "skipped").length, 1);
+    assert.equal(extracted.article.segments.filter((segment) => segment.kind === "skipped").length, 2);
+    assert.equal(extracted.article.segments.find((segment) => segment.kind === "h1").text, "Claude Fable 5.1 and Mythos 5.1");
     assert.ok(!extracted.article.segments.some((segment) => segment.text.includes("String matching checks")));
+    assert.ok(!extracted.article.segments.some((segment) => segment.text.includes("friendly Fable")));
     assert.equal(await page.locator("#grid").count(), 1, "原文复杂模块仍须存在");
+    assert.equal(await page.locator("#carousel").count(), 1, "原文轮播仍须存在");
     const extensionOrigin = worker.url().match(/^(chrome-extension:\/\/[^/]+)/)[1];
     const panel = await context.newPage();
     await panel.goto(extensionOrigin + "/sidepanel.html");
-    await panel.locator(".yidu-skipped").waitFor();
-    assert.match(await panel.locator(".yidu-skipped").textContent(), /复杂模块保留在原文中/);
+    await panel.locator(".yidu-skipped").first().waitFor();
+    await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
+    assert.ok(!(await panel.locator(".yidu-h1").textContent()).includes(":Claude:"));
+    assert.equal(await panel.locator(".yidu-skipped").count(), 2);
+    assert.equal(await panel.locator(".yidu-skipped").first().getAttribute("aria-busy"), null);
+    assert.match(await panel.locator(".yidu-skipped").first().textContent(), /复杂模块保留在原文中/);
     assert.equal(await panel.getByText("String matching checks", { exact: false }).count(), 0);
+    assert.equal(await panel.getByText("friendly Fable", { exact: false }).count(), 0);
 
 
     async function selectIntro() {
