@@ -8,10 +8,16 @@
   let trackedBlocks = [];
   let trackedIndex = 0;
   let scrollFrame = 0;
+  let lastSelectionKey = "";
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "YIDU_REQUEST_SCROLL_SYNC") {
       scheduleScrollSync();
+      sendResponse({ ok: true });
+      return false;
+    }
+    if (message?.type === "YIDU_REQUEST_SELECTION_SYNC") {
+      emitSelectionSync(true);
       sendResponse({ ok: true });
       return false;
     }
@@ -49,7 +55,7 @@
             links: []
           };
           segments.push(segment);
-          nextTrackedBlocks.push({ id: segment.id, node: module });
+          nextTrackedBlocks.push({ id: segment.id, ids: [segment.id], node: module, kind: "skipped" });
         }
         continue;
       }
@@ -66,11 +72,13 @@
       const chunks = text.length > MAX_SEGMENT_CHARS
         ? splitOversizedText(text).map((chunk) => ({ text: chunk, markup: escapeHtml(chunk), links: [] }))
         : [{ text, markup: serialized.markup, links: serialized.links }];
-      chunks.forEach((chunk, chunkIndex) => {
+      const ids = [];
+      chunks.forEach((chunk) => {
         const segment = { id: `s${segments.length + 1}`, kind, ...chunk };
         segments.push(segment);
-        if (chunkIndex === 0) nextTrackedBlocks.push({ id: segment.id, node });
+        ids.push(segment.id);
       });
+      nextTrackedBlocks.push({ id: ids[0], ids, node, kind });
     }
 
     if (!segments.length) throw new Error("没有识别到可翻译的英文文章正文。");
@@ -82,6 +90,7 @@
     const title = titleSegment?.text || "Untitled article";
     trackedBlocks = nextTrackedBlocks;
     trackedIndex = 0;
+    lastSelectionKey = "";
     const canonicalUrl = document.querySelector('link[rel="canonical"]')?.href || location.href;
     return { title, source: location.hostname, url: canonicalUrl, segments };
   }
@@ -230,6 +239,7 @@
 
   document.addEventListener("mouseup", onSelectionChange);
   document.addEventListener("keyup", (event) => {
+    emitSelectionSync();
     if (event.key === "Escape") {
       hideSelectionUi();
       return;
@@ -243,6 +253,7 @@
   }, true);
 
   function onSelectionChange() {
+    emitSelectionSync();
     if (selectionShadow?.querySelector(".yidu-result")) return;
     const selection = window.getSelection();
     const text = (selection?.toString() || "").replace(/\s+/g, " ").trim();
@@ -262,6 +273,26 @@
     renderSelectionMenu();
   }
 
+  function emitSelectionSync(force = false) {
+    const selection = window.getSelection();
+    const text = (selection?.toString() || "").replace(/\s+/g, " ").trim();
+    let ids = [];
+    if (text && /[A-Za-z]/.test(text) && selection?.rangeCount) {
+      const start = selection.getRangeAt(0).startContainer;
+      const element = start.nodeType === Node.ELEMENT_NODE ? start : start.parentElement;
+      if (element && !element.closest("#yidu-selection-root, input, textarea, [contenteditable], [role='textbox']")) {
+        const block = trackedBlocks.find((item) => item.node === element || item.node.contains(element));
+        if (block?.kind !== "skipped") ids = block?.ids || [];
+      }
+    }
+    const key = ids.join(",");
+    if (!force && key === lastSelectionKey) return;
+    lastSelectionKey = key;
+    void chrome.runtime.sendMessage({
+      type: "YIDU_SOURCE_SELECTION",
+      payload: { segmentIds: ids }
+    }).catch(() => undefined);
+  }
   function ensureSelectionRoot() {
     if (selectionRoot) return;
     selectionRoot = document.createElement("div");

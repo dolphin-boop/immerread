@@ -6,7 +6,8 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
-const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p></main></body></html>';
+const longText = "Long article paragraph with many sentences about evaluating autonomous agents. ".repeat(30);
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
 const server = http.createServer((_request, response) => {
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
@@ -72,6 +73,9 @@ const server = http.createServer((_request, response) => {
     assert.match(await panel.locator(".yidu-skipped").first().textContent(), /复杂模块保留在原文中/);
     assert.equal(await panel.getByText("String matching checks", { exact: false }).count(), 0);
     assert.equal(await panel.getByText("friendly Fable", { exact: false }).count(), 0);
+    const longIndex = extracted.article.segments.findIndex((segment) => segment.text.startsWith("Long article paragraph"));
+    const longIds = extracted.article.segments.slice(longIndex).map((segment) => segment.id);
+    assert.ok(longIndex > 0 && longIds.length > 1, "长段落应拆分为多条译文");
 
 
     async function selectIntro() {
@@ -88,6 +92,10 @@ const server = http.createServer((_request, response) => {
     }
 
     await selectIntro();
+    await panel.locator(".yidu-source-selected").waitFor();
+    assert.equal(await panel.locator(".yidu-source-selected").count(), 1);
+    assert.equal(await panel.locator(".yidu-source-selected").first().getAttribute("data-segment-id"), extracted.article.segments.find((segment) => segment.text.startsWith("Evaluation harnesses")).id);
+    assert.equal(await panel.locator(".yidu-source-selected").first().evaluate((row) => getComputedStyle(row).backgroundColor), "rgb(243, 231, 218)");
     assert.deepEqual(await page.locator("#yidu-selection-root .yidu-menu button").allTextContents(), ["翻译", "解释"]);
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();
 
@@ -101,12 +109,45 @@ const server = http.createServer((_request, response) => {
     await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "智能体评测的简短解释。" }).waitFor();
     await page.keyboard.press("Escape");
     assert.equal(await page.locator("#yidu-selection-root .yidu-result").count(), 0);
+    await page.evaluate(() => {
+      window.getSelection().removeAllRanges();
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await panel.locator(".yidu-source-selected").first().waitFor({ state: "detached" });
+    await page.evaluate(() => {
+      const node = document.querySelector("#carousel blockquote p").firstChild;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await page.locator("#yidu-selection-root .yidu-menu button").first().waitFor();
+    assert.equal(await panel.locator(".yidu-source-selected").count(), 0, "复杂模块不应误标识译文");
+    await page.evaluate(() => {
+      const node = document.querySelector("#long").firstChild;
+      const range = document.createRange();
+      range.setStart(node, node.length - 40);
+      range.setEnd(node, node.length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await panel.locator(".yidu-source-selected").first().waitFor();
+    assert.deepEqual(await panel.locator(".yidu-source-selected").evaluateAll((rows) => rows.map((row) => row.dataset.segmentId)), longIds);
+    await page.evaluate(() => {
+      window.getSelection().removeAllRanges();
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await panel.locator(".yidu-source-selected").first().waitFor({ state: "detached" });
     await worker.evaluate(async () => chrome.storage.local.remove("deepseekApiKey"));
     await selectIntro();
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();
     await page.locator("#yidu-selection-root .yidu-error").filter({ hasText: "DeepSeek API Key" }).waitFor();
     assert.equal(await page.locator("#yidu-selection-root .yidu-settings").textContent(), "打开设置");
-    console.log("选词翻译/解释、浮窗关闭、缺少密钥提示、复杂模块跳过：通过");
+    console.log("选词翻译/解释、对应段落暖色标识及清除、长段落、复杂模块、缺少密钥：通过");
   } finally {
     await context?.close();
     await new Promise((resolve) => server.close(resolve));

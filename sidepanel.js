@@ -24,6 +24,7 @@
   });
   chrome.runtime.onMessage.addListener((message, sender) => {
     if (message?.type === "YIDU_SOURCE_SCROLL") handleSourceScroll(message.payload, sender.tab?.id);
+    if (message?.type === "YIDU_SOURCE_SELECTION") handleSourceSelection(message.payload, sender.tab?.id);
     return false;
   });
 
@@ -49,6 +50,28 @@
       const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
       window.scrollTo(0, Math.max(0, Math.min(maxScroll, target)));
     });
+  }
+  function handleSourceSelection(payload, tabId) {
+    const current = session;
+    if (!current || current.stopped || tabId !== current.tabId) return;
+    const ids = new Set(
+      (Array.isArray(payload?.segmentIds) ? payload.segmentIds : [])
+        .map(String)
+        .filter((id) => current.segmentsById.get(id)?.kind !== "skipped" && current.rows.has(id))
+    );
+    const previous = current.selectedSegmentIds;
+    if (ids.size === previous.size && [...ids].every((id) => previous.has(id))) return;
+    for (const id of previous) current.rows.get(id)?.classList.remove("yidu-source-selected");
+    for (const id of ids) current.rows.get(id)?.classList.add("yidu-source-selected");
+    current.selectedSegmentIds = ids;
+    const first = current.rows.get(ids.values().next().value);
+    if (first) {
+      requestAnimationFrame(() => {
+        if (!current.stopped && current.selectedSegmentIds.has(first.dataset.segmentId)) {
+          first.scrollIntoView({ block: "center", behavior: "auto" });
+        }
+      });
+    }
   }
   async function loadActiveArticle() {
     stopSession();
@@ -131,7 +154,8 @@
       failed: false,
       failedSegments: [],
       cachedCount: 0,
-      termsVisible: false
+      termsVisible: false,
+      selectedSegmentIds: new Set()
     };
     session = next;
     renderArticle(next);
@@ -139,6 +163,7 @@
       if (next.stopped) return;
       startViewportTranslation(next);
       void chrome.tabs.sendMessage(next.tabId, { type: "YIDU_REQUEST_SCROLL_SYNC" }).catch(() => undefined);
+      void chrome.tabs.sendMessage(next.tabId, { type: "YIDU_REQUEST_SELECTION_SYNC" }).catch(() => undefined);
     });
   }
 
