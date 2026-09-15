@@ -25,6 +25,7 @@ test("rejects sentences and empty user translations", () => {
 test("matches exact terms rather than substrings and sends only relevant terms", () => {
   const glossary = upsertGlossary(upsertGlossary({}, "agent", "智能体"), "output", "输出结果");
   assert.equal(containsTerm("agents", "agent"), false);
+  assert.equal(containsTerm("AI agents improve evaluations.", "agents"), true);
   assert.equal(containsTerm("An agent outputs a result.", "agent"), true);
   assert.deepEqual(matchingGlossaryEntries(glossary, "An agent outputs a result.").map((entry) => entry.source), ["agent"]);
   assert.deepEqual(glossaryForSegments(glossary, [{ text: "An agent outputs a result." }]), { agent: "智能体" });

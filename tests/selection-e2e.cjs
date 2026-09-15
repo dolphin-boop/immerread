@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
 const longText = "Long article paragraph with many sentences about evaluating autonomous agents. ".repeat(30);
-const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p>Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
+const html = '<!doctype html><html lang="en"><head><title>Example article</title></head><body><main><h1 aria-label="Claude Fable 5.1 and Mythos 5.1"><span aria-hidden="true">:Claude: Fable 5.1</span><span aria-hidden="true">and Mythos 5.1</span></h1><p id="intro">Evaluation harnesses help teams measure agent performance.</p><section id="carousel" class="TestimonialCarousel-module-scss-module__o0jJtW__carousel"><button>Previous</button><div class="TestimonialCarousel-module-scss-module__o0jJtW__stage"><article class="TestimonialCarousel-module-scss-module__o0jJtW__card"><blockquote><p>It’s friendly Fable and it runs twice as fast as the previous model.</p></blockquote></article></div><button>Next</button></section><div id="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h3>Methods</h3><p>String matching checks cover exact patterns and binary tests for each task.</p></div><div><h3>Strengths</h3><p>They are fast and cheap while reproducible across several independent trials.</p></div></div><p id="plural">Good evaluations help teams ship agents more confidently.</p><p id="long">' + longText + '</p></main></body></html>';
 const server = http.createServer((_request, response) => {
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
@@ -41,9 +41,10 @@ const server = http.createServer((_request, response) => {
         if (request.response_format) {
           const input = JSON.parse(request.messages[1].content);
           const locked = request.messages[0].content.includes("agent => 代理体");
+          const pluralLocked = request.messages[0].content.includes("agents => 智能体们");
           if (locked) await new Promise((resolve) => setTimeout(resolve, 400));
           const items = input.segments.map((segment) => ({
-            id: segment.id, translation: (locked ? "新术语译文：" : "译文：") + segment.text, terms: []
+            id: segment.id, translation: (pluralLocked ? "复数新译文：" : locked ? "新术语译文：" : "译文：") + (pluralLocked ? segment.text.replace(/\bagents\b/gi, "智能体们") : segment.text), terms: []
           }));
           return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
         }
@@ -191,6 +192,26 @@ const server = http.createServer((_request, response) => {
     }));
     assert.ok(anotherArticle.ok);
     assert.match(anotherArticle.items[0].translation, /新术语译文/, "新文章应沿用已保存术语");
+    await page.locator("#yidu-selection-root .yidu-close").click();
+    const pluralId = extracted.article.segments.find((segment) => segment.text.startsWith("Good evaluations")).id;
+    await panel.locator('.yidu-segment[data-segment-id="' + pluralId + '"][data-translated="true"]').waitFor();
+    await page.evaluate(() => {
+      const node = document.querySelector("#plural").firstChild;
+      const start = node.textContent.indexOf("agents");
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + "agents".length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await page.locator("#yidu-selection-root .yidu-menu button").nth(2).click();
+    await page.locator("#yidu-selection-root .yidu-glossary-form input").fill("智能体们");
+    await page.locator("#yidu-selection-root .yidu-save").click();
+    await page.locator("#yidu-selection-root .yidu-feedback").filter({ hasText: "已保存" }).waitFor();
+    await panel.locator('.yidu-segment[data-segment-id="' + pluralId + '"]').filter({ hasText: "复数新译文：Good evaluations help teams ship 智能体们" }).waitFor();
+    assert.equal((await worker.evaluate(async () => (await chrome.storage.local.get("yiduGlossaryV1")).yiduGlossaryV1)).entries.agents.target, "智能体们");
     await page.locator("#yidu-selection-root .yidu-close").click();
     await worker.evaluate(async () => chrome.storage.local.remove("deepseekApiKey"));
     await selectIntro();
