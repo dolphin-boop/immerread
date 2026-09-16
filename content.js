@@ -87,16 +87,11 @@
       if (semanticParent && semanticParent !== node) continue;
       if (node.matches("td, th") && node.querySelector("h1, h2, h3, h4, h5, h6, p, blockquote, li")) continue;
       let kind = getBlockKind(node);
-      const isCell = !!node.closest("table, [role='table'], [role='grid']");
-      if (isCell) kind = "cell";
+      if (node.closest("table, [role='table'], [role='grid']")) kind = "cell";
       const prepared = prepareBlock(node);
       const accessibleTitle = kind === "h1" ? node.getAttribute("aria-label")?.trim() : "";
-      let text = cleanHeadingStart(accessibleTitle || readableText(prepared), kind);
+      const text = cleanHeadingStart(accessibleTitle || readableText(prepared), kind);
       if (text.length < 2) continue;
-      if (isCell) {
-        const header = tableColumnHeader(node);
-        if (header && !text.startsWith(header)) text = `${header}：${text}`;
-      }
       const serialized = accessibleTitle
         ? { markup: escapeHtml(accessibleTitle), links: [] }
         : serializeInline(prepared);
@@ -168,22 +163,6 @@
     }
     return componentRoot;
   }
-  function tableColumnHeader(node) {
-    const cell = node.matches("td, th") ? node : node.closest("td, th");
-    if (!cell || cell.matches("th") || typeof cell.cellIndex !== "number") return "";
-    const table = cell.closest("table");
-    if (!table) return "";
-    try {
-      const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
-      const headerCell = headerRow?.children[cell.cellIndex];
-      if (!headerCell || headerCell === cell) return "";
-      const header = readableText(headerCell);
-      return header && header.length <= 40 ? header : "";
-    } catch {
-      return "";
-    }
-  }
-
   function stripTags(markup) {
     const template = document.createElement("template");
     template.innerHTML = String(markup || "");

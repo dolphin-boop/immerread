@@ -37,6 +37,7 @@ test("configures a local Manifest V3 side panel extension", async () => {
   assert.match(background, /deepseekApiUrl/);
   assert.match(background, /onInstalled/);
   assert.match(background, /openOptionsPage/);
+  assert.match(background, /requestSegments\.length < 2/);
   assert.match(background, /thinking:\s*\{\s*type:\s*"disabled"\s*\}/);
 });
 
@@ -56,7 +57,6 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li, td, th/);
   assert.match(content, /YIDU_RENDER_CELLS/);
   assert.match(content, /yidu-cell-translation/);
-  assert.match(content, /tableColumnHeader/);
   assert.doesNotMatch(content, /getComputedStyle\(parent\)/);
   assert.match(content, /<strong>/);
   assert.match(content, /<u>/);

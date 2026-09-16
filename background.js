@@ -146,7 +146,15 @@ async function translateBatch(payload) {
         throw new Error(detail?.error?.message || `DeepSeek 请求失败（${response.status}）`);
       }
       const body = await response.json();
-      return parseTranslationResponse(body?.choices?.[0]?.message?.content, requestSegments.map((segment) => segment.id));
+      try {
+        return parseTranslationResponse(body?.choices?.[0]?.message?.content, requestSegments.map((segment) => segment.id));
+      } catch (error) {
+        if (requestSegments.length < 2) throw error;
+        const middle = Math.ceil(requestSegments.length / 2);
+        const first = await requestTranslations(requestSegments.slice(0, middle), protectTerms);
+        const second = await requestTranslations(requestSegments.slice(middle), protectTerms);
+        return first.concat(second);
+      }
     }
 
     let items = await requestTranslations(segments);
