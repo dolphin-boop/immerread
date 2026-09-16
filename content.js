@@ -4,12 +4,13 @@
   document.getElementById("yidu-selection-root")?.remove();
 
   const MAX_SEGMENT_CHARS = 1200;
-  const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, blockquote, li";
+  const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, blockquote, li, td, th";
   const EXCLUDED_SELECTOR = "nav, footer, aside, form, script, style, pre, code, figure, [aria-hidden='true']";
   let trackedBlocks = [];
   let trackedIndex = 0;
   let scrollFrame = 0;
   let lastSelectionKey = "";
+  let cellNotes = new Map();
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "YIDU_REQUEST_SCROLL_SYNC") {
@@ -37,6 +38,11 @@
       sendResponse({ ok: true });
       return false;
     }
+    if (message?.type === "YIDU_RENDER_CELLS") {
+      renderCellTranslations(message.payload?.items);
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type !== "YIDU_GET_ARTICLE") return false;
     try {
       sendResponse({ ok: true, article: extractArticle() });
@@ -48,6 +54,8 @@
   window.addEventListener("scroll", scheduleScrollSync, { passive: true });
 
   function extractArticle() {
+    document.querySelectorAll(".yidu-cell-translation").forEach((note) => note.remove());
+    cellNotes = new Map();
     const candidates = [...document.querySelectorAll("article, main, [role='main']")];
     const container = candidates
       .map((element) => ({ element, score: readableText(element).length }))
@@ -77,11 +85,18 @@
       }
       const semanticParent = node.parentElement?.closest("blockquote, li");
       if (semanticParent && semanticParent !== node) continue;
-      const kind = getBlockKind(node);
+      if (node.matches("td, th") && node.querySelector("h1, h2, h3, h4, h5, h6, p, blockquote, li")) continue;
+      let kind = getBlockKind(node);
+      const isCell = !!node.closest("table, [role='table'], [role='grid']");
+      if (isCell) kind = "cell";
       const prepared = prepareBlock(node);
       const accessibleTitle = kind === "h1" ? node.getAttribute("aria-label")?.trim() : "";
-      const text = cleanHeadingStart(accessibleTitle || readableText(prepared), kind);
+      let text = cleanHeadingStart(accessibleTitle || readableText(prepared), kind);
       if (text.length < 2) continue;
+      if (isCell) {
+        const header = tableColumnHeader(node);
+        if (header && !text.startsWith(header)) text = `${header}：${text}`;
+      }
       const serialized = accessibleTitle
         ? { markup: escapeHtml(accessibleTitle), links: [] }
         : serializeInline(prepared);
@@ -144,33 +159,69 @@
   function findComplexModule(node, container) {
     let parent = node.parentElement;
     let componentRoot = null;
-    let layoutRoot = null;
     while (parent && parent !== container && parent !== document.body) {
-      if (parent.matches("table, [role='table'], [role='grid']")) {
-        layoutRoot ||= parent;
-      }
       if (parent.matches("[aria-roledescription='carousel']") ||
         /carousel|slider|gallery|chart|graph|interactive/i.test(String(parent.className || ""))) {
         componentRoot = parent;
       }
-      if (!layoutRoot) {
-        const style = getComputedStyle(parent);
-        const children = [...parent.children].filter((child) => readableText(child).length > 25);
-        if (children.length >= 2 && readableText(parent).length > 100 &&
-          (style.display === "grid" || style.display === "flex") &&
-          children.some((child, index) => index > 0 &&
-            Math.abs(child.getBoundingClientRect().left - children[0].getBoundingClientRect().left) > 40 &&
-            Math.abs(child.getBoundingClientRect().top - children[0].getBoundingClientRect().top) < 80)) {
-          layoutRoot = parent;
-        }
-      }
       parent = parent.parentElement;
     }
-    return componentRoot || layoutRoot;
+    return componentRoot;
   }
+  function tableColumnHeader(node) {
+    const cell = node.matches("td, th") ? node : node.closest("td, th");
+    if (!cell || cell.matches("th") || typeof cell.cellIndex !== "number") return "";
+    const table = cell.closest("table");
+    if (!table) return "";
+    try {
+      const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
+      const headerCell = headerRow?.children[cell.cellIndex];
+      if (!headerCell || headerCell === cell) return "";
+      const header = readableText(headerCell);
+      return header && header.length <= 40 ? header : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function stripTags(markup) {
+    const template = document.createElement("template");
+    template.innerHTML = String(markup || "");
+    return (template.content.textContent || "").trim();
+  }
+
+  let cellStyleInjected = false;
+  function ensureCellStyle() {
+    if (cellStyleInjected) return;
+    cellStyleInjected = true;
+    const style = document.createElement("style");
+    style.textContent = ".yidu-cell-translation{display:block;margin-top:3px;font-size:.8em;line-height:1.6;color:#8a847a;font-style:normal;font-weight:400;text-decoration:none}";
+    document.head.append(style);
+  }
+
+  function renderCellTranslations(items) {
+    if (!Array.isArray(items) || !items.length) return;
+    ensureCellStyle();
+    for (const item of items) {
+      const id = String(item?.id || "");
+      if (!id) continue;
+      const block = trackedBlocks.find((entry) => entry.ids.includes(id));
+      if (!block) continue;
+      let note = cellNotes.get(id);
+      if (!note || !note.isConnected) {
+        note = document.createElement("span");
+        note.className = "yidu-cell-translation";
+        cellNotes.set(id, note);
+        block.node.append(note);
+      }
+      note.textContent = stripTags(item.translation);
+    }
+  }
+
   function prepareBlock(node) {
     const clone = node.cloneNode(true);
     clone.querySelectorAll("[aria-hidden='true']").forEach((hidden) => hidden.remove());
+    clone.querySelectorAll(".yidu-cell-translation").forEach((note) => note.remove());
     if (node.matches("li")) clone.querySelectorAll("ul, ol").forEach((list) => list.remove());
     return clone;
   }

@@ -519,6 +519,7 @@ import { groupArticleModules } from "./lib/summary.js";
     let list = null;
     let listKind = "";
     for (const segment of current.article.segments) {
+      if (segment.kind === "cell") continue;
       const isListItem = segment.kind === "ul-item" || segment.kind === "ol-item";
       let element;
       if (isListItem) {
@@ -566,6 +567,7 @@ import { groupArticleModules } from "./lib/summary.js";
 
   function startViewportTranslation(current) {
     current.article.segments.slice(0, BATCH_SIZE).forEach((segment) => enqueue(current, segment));
+    current.article.segments.filter((segment) => segment.kind === "cell").forEach((segment) => enqueue(current, segment));
     if (!("IntersectionObserver" in window)) {
       current.article.segments.forEach((segment) => enqueue(current, segment));
       return;
@@ -634,8 +636,15 @@ import { groupArticleModules } from "./lib/summary.js";
     for (const term of item.terms || []) current.glossary[term.source] = term.target;
     current.completed.add(item.id);
     if (fromCache) current.cachedCount += 1;
-    current.observer?.unobserve(current.rows.get(item.id));
+    const translatedRow = current.rows.get(item.id);
+    if (translatedRow) current.observer?.unobserve(translatedRow);
     renderTranslation(current, item.id, item);
+    if (segment.kind === "cell") {
+      void chrome.tabs.sendMessage(current.tabId, {
+        type: "YIDU_RENDER_CELLS",
+        payload: { items: [{ id: item.id, translation: item.translation }] }
+      }).catch(() => undefined);
+    }
     updateSummaryArticleTitle(current, segment);
     updateProgress(current);
   }

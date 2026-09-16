@@ -53,7 +53,11 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /dismissSelectionUi/);
   assert.doesNotMatch(content, /className = "yidu-close"|close\.textContent = "×"/);
   assert.match(content, /requestAnimationFrame/);
-  assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li/);
+  assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li, td, th/);
+  assert.match(content, /YIDU_RENDER_CELLS/);
+  assert.match(content, /yidu-cell-translation/);
+  assert.match(content, /tableColumnHeader/);
+  assert.doesNotMatch(content, /getComputedStyle\(parent\)/);
   assert.match(content, /<strong>/);
   assert.match(content, /<u>/);
   assert.match(content, /data-link/);
@@ -98,6 +102,8 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(background, /YIDU_SUMMARIZE_MODULE/);
   assert.match(panelScript, /YIDU_SUMMARIZE_MODULE/);
   assert.match(panelScript, /YIDU_SCROLL_TO_SEGMENT/);
+  assert.match(panelScript, /YIDU_RENDER_CELLS/);
+  assert.match(panelScript, /segment\.kind === "cell"\) continue/);
   assert.match(panelScript, /YIDU_GLOSSARY_GET/);
   assert.match(panelScript, /YIDU_GLOSSARY_DELETE/);
   assert.match(panelStyles, /\.yidu-summary-article-original/);
