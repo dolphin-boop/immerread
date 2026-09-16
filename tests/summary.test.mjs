@@ -43,8 +43,9 @@ test("summary prompt limits the model to the current module and validates struct
   assert.match(messages[0].content, /不要概括未提供的章节/);
   assert.doesNotMatch(messages[0].content, /固定译法/);
   assert.doesNotMatch(messages[1].content, /glossary|url|Other chapter/);
-  assert.deepEqual(parseSummaryResponse('{"title":"评测方法","summary":"介绍评测方法。后面是多余细节。","points":["多余要点"]}'), {
-    title: "评测方法", summary: "介绍评测方法。"
+  assert.match(messages[0].content, /一到三句/);
+  assert.deepEqual(parseSummaryResponse('{"title":"评测方法","summary":"介绍评测方法。补充关键结论。再补一句重点。第四句多余细节会被去掉。","points":["多余要点"]}'), {
+    title: "评测方法", summary: "介绍评测方法。补充关键结论。再补一句重点。"
   });
   assert.deepEqual(parseSummaryResponse('{"result":{"heading":"评测方法","overview":"简短概述"}}'), {
     title: "评测方法", summary: "简短概述"
