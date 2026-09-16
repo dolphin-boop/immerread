@@ -102,7 +102,7 @@ try:
                 assert panel.locator("h1.yidu-h1").get_attribute("data-translated") == "true"
 
                 assert panel.get_by_role("tab", name="中文翻译").get_attribute("aria-selected") == "true"
-                assert panel.get_by_role("tab", name="AI 总结").count() == 1
+                assert panel.get_by_role("tab", name="导读").count() == 1
                 assert panel.get_by_role("tab", name="固定译法库").count() == 1
                 assert panel.get_by_role("switch").count() == 0
 
@@ -115,7 +115,7 @@ try:
                     assert panel.locator("blockquote.yidu-blockquote").count() == 1
                     assert panel.locator("ul.yidu-list li").count() == 2
                     assert rich.locator("mark.yidu-term").count() == 0
-                    panel.get_by_role("tab", name="AI 总结").click()
+                    panel.get_by_role("tab", name="导读").click()
                     assert panel.locator("#view-summary .yidu-summary-module").count() > 0
                     panel.locator("#view-summary .yidu-summary-overview").first.wait_for(state="visible")
                     panel.get_by_role("tab", name="固定译法库").click()

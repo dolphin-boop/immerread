@@ -97,13 +97,24 @@ import { groupArticleModules } from "./lib/summary.js";
     current.summaryProgress = progress;
     summaryContent.append(title, intro, progress);
     if (!modules.length) {
-      progress.textContent = "文章中没有可总结的正文。";
+      progress.textContent = "文章中没有可生成导读的正文。";
       return;
     }
     for (const [index, module] of modules.entries()) {
       const section = document.createElement("section");
       section.className = "yidu-summary-module";
       section.dataset.moduleId = module.id;
+      section.tabIndex = 0;
+      section.setAttribute("role", "link");
+      section.setAttribute("aria-label", "定位英文原文：" + module.title);
+      section.addEventListener("click", (event) => {
+        if (!event.target.closest("button, a, input, textarea, select")) void locateSourceModule(current, module);
+      });
+      section.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        void locateSourceModule(current, module);
+      });
       const number = document.createElement("span");
       number.className = "yidu-summary-number";
       number.textContent = String(index + 1).padStart(2, "0");
@@ -115,7 +126,7 @@ import { groupArticleModules } from "./lib/summary.js";
       body.className = "yidu-summary-body";
       const pending = document.createElement("p");
       pending.className = "yidu-summary-pending";
-      pending.textContent = "等待总结…";
+      pending.textContent = "等待导读…";
       body.append(pending);
       details.append(heading, body);
       section.append(number, details);
@@ -125,6 +136,17 @@ import { groupArticleModules } from "./lib/summary.js";
     if (activeView === "summary") void runSummaries(current);
   }
 
+  async function locateSourceModule(current, module) {
+    if (current.stopped) return;
+    try {
+      await chrome.tabs.sendMessage(current.tabId, {
+        type: "YIDU_SCROLL_TO_SEGMENT",
+        payload: { segmentId: module.startId }
+      });
+    } catch {
+      // 页面连接失效时，保留导读内容供用户继续阅读。
+    }
+  }
   function summaryBody(module) {
     return [...summaryContent.querySelectorAll(".yidu-summary-module")]
       .find((section) => section.dataset.moduleId === module.id)
@@ -136,8 +158,8 @@ import { groupArticleModules } from "./lib/summary.js";
     const done = current.summaryResults.size;
     const total = current.summaryModules.length;
     current.summaryProgress.textContent = (done === total
-      ? "已总结 " + total + " 个模块"
-      : "已总结 " + done + " / " + total + " 个模块") +
+      ? "已生成 " + total + " 个导读模块"
+      : "已生成 " + done + " / " + total + " 个导读模块") +
       (current.summaryCachedCount ? " · 缓存 " + current.summaryCachedCount : "") +
       (current.summaryCacheError ? " · 部分结果缓存失败" : "");
   }
@@ -165,7 +187,7 @@ import { groupArticleModules } from "./lib/summary.js";
     body.setAttribute("aria-busy", "true");
     const pending = document.createElement("p");
     pending.className = "yidu-summary-pending";
-    pending.textContent = "正在生成总结…";
+    pending.textContent = "正在生成导读…";
     body.replaceChildren(pending);
     let outcome;
     try {
@@ -174,7 +196,7 @@ import { groupArticleModules } from "./lib/summary.js";
         payload: { url: current.article.url, title: current.article.title, module }
       });
       if (current.stopped) return outcome;
-      if (!outcome?.ok) throw new Error(outcome?.message || "总结失败，请重试。");
+      if (!outcome?.ok) throw new Error(outcome?.message || "导读生成失败，请重试。");
       current.summaryResults.set(module.id, outcome.result);
       const details = body.parentElement;
       details.querySelector("h2").textContent = outcome.result.title;
@@ -195,7 +217,7 @@ import { groupArticleModules } from "./lib/summary.js";
         current.summaryFailed.add(module.id);
         const message = document.createElement("p");
         message.className = "yidu-summary-failure";
-        message.textContent = error?.message || "总结失败，请重试。";
+        message.textContent = error?.message || "导读生成失败，请重试。";
         const actions = document.createElement("div");
         actions.className = "yidu-actions";
         if (outcome?.code === "SETUP_REQUIRED") {

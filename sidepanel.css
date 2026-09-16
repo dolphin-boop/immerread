@@ -7,6 +7,9 @@
 .yidu-summary-title,.yidu-glossary-content h1{margin:0;font-size:25px;font-weight:600;line-height:1.35}
 .yidu-summary-note,.yidu-glossary-empty{padding:15px 16px;border:1px solid var(--line);border-radius:9px;background:var(--paper-raised);color:var(--muted);font-size:13px}
 .yidu-summary-module{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px;padding:18px 0;border-top:1px solid var(--line)}
+.yidu-summary-module[role="link"]{cursor:pointer;border-radius:8px;padding-inline:8px;transition:background-color 140ms ease}
+.yidu-summary-module[role="link"]:hover{background:#f0ebe1}
+.yidu-summary-module[role="link"]:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}
 .yidu-summary-number{padding-top:4px;color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.06em}
 .yidu-summary-module h2{margin:0;font-size:18px;font-weight:600;line-height:1.45}
 .yidu-glossary-form{display:grid;gap:6px;margin-bottom:24px}

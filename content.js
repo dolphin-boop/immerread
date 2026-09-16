@@ -22,6 +22,21 @@
       sendResponse({ ok: true });
       return false;
     }
+    if (message?.type === "YIDU_SCROLL_TO_SEGMENT") {
+      const segmentId = String(message.payload?.segmentId || "");
+      const index = trackedBlocks.findIndex((block) => block.ids.includes(segmentId));
+      const block = trackedBlocks[index];
+      if (!block) {
+        sendResponse({ ok: false, message: "未找到对应的原文模块。" });
+        return false;
+      }
+      trackedIndex = index;
+      const top = window.scrollY + block.node.getBoundingClientRect().top - 80;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      window.setTimeout(scheduleScrollSync, 350);
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type !== "YIDU_GET_ARTICLE") return false;
     try {
       sendResponse({ ok: true, article: extractArticle() });

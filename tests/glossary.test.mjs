@@ -51,7 +51,7 @@ test("does not match a multiword term across two article segments", () => {
 test("repairs a model response that translated a locked English term into Chinese", () => {
   const glossary = upsertGlossary({}, "agents", "agents");
   const segments = [{ id: "title", text: "Demystifying evals for AI agents", markup: "<strong>Demystifying evals for AI agents</strong>" }];
-  const initial = [{ id: "title", translation: "揭开 AI 智能体评测的神秘面纱", terms: [] }];
+  const initial = [{ id: "title", translation: "揭开 AI 智能体评测的神秘面纱", terms: [{ source: "AI agents", target: "AI 智能体" }] }];
   assert.deepEqual(missingFixedTerms(glossary, segments, initial), [{ id: "title", source: "agents", target: "agents" }]);
   const retry = prepareFixedTermRetry(glossary, segments);
   assert.match(retry.segments[0].text, /__YIDU_TERM_0_0__/);
@@ -61,8 +61,9 @@ test("repairs a model response that translated a locked English term into Chines
   assert.deepEqual(missingFixedTerms(glossary, segments, repaired), []);
   const fallback = new Map([["title", initial[0]]]);
   const ignoredPlaceholder = restoreFixedTermRetry(initial, retry.replacements, fallback);
-  assert.equal(ignoredPlaceholder[0].translation, initial[0].translation);
-  assert.equal(ignoredPlaceholder[0].fixedTermWarning, "agents");
+  assert.match(ignoredPlaceholder[0].translation, /AI agents/);
+  assert.doesNotMatch(ignoredPlaceholder[0].translation, /智能体/);
+  assert.equal(ignoredPlaceholder[0].fixedTermWarning, undefined);
 });
 
 test("protects longer terms first and escapes user-selected HTML-like targets", () => {

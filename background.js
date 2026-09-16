@@ -239,7 +239,7 @@ async function summarizeModule(payload) {
     const cacheSaved = await summaryWriteChain.then(() => true, () => false);
     return { ok: true, result, cached: false, cacheSaved };
   } catch (error) {
-    return { ok: false, code: "SUMMARY_FAILED", message: error?.message || "总结失败，请重试。" };
+    return { ok: false, code: "SUMMARY_FAILED", message: error?.message || "导读生成失败，请重试。" };
   }
 }
 

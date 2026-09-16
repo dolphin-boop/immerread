@@ -74,7 +74,7 @@ const server = http.createServer((_request, response) => {
               ? "模型忽略了固定译法占位符"
               : (segment.kind === "h1" ? ":" : "") + (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
                 + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们")),
-            terms: []
+            terms: pluralLocked && !protectedTerms ? [{ source: "agents", target: "智能体们" }] : []
           }));
           return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
         }
@@ -141,6 +141,14 @@ const server = http.createServer((_request, response) => {
     await conclusion.locator(".yidu-summary-overview").filter({ hasText: "概述：Conclusion" }).waitFor();
     assert.equal(await conclusion.locator("h2").textContent(), "结论");
     assert.equal(await conclusion.locator(".yidu-summary-original").textContent(), "Conclusion");
+    await conclusion.click({ position: { x: 4, y: 4 } });
+    await page.waitForTimeout(1000);
+    const sourcePosition = await page.evaluate(() => ({
+      scrollY: window.scrollY,
+      top: document.getElementById("conclusion-heading").getBoundingClientRect().top
+    }));
+    assert.ok(sourcePosition.scrollY > 0 && sourcePosition.top >= 0 && sourcePosition.top < 720 * 0.65,
+      "点击导读模块后英文原文应定位到对应章节：" + JSON.stringify(sourcePosition));
     assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 3);
     const summaryInput = await worker.evaluate(() => globalThis.yiduSummaryInput);
     assert.ok(summaryInput.segments.length > 1);
@@ -348,8 +356,9 @@ const server = http.createServer((_request, response) => {
     }));
     await worker.evaluate(() => { globalThis.yiduDropProtectedToken = false; });
     assert.equal(ignoredFixedTerm.ok, true, "模型忽略占位符时不得让整批翻译失败");
-    assert.equal(ignoredFixedTerm.items[0].fixedTermWarning, "agents");
-    assert.match(ignoredFixedTerm.items[0].translation, /^复数旧译文：/);
+    assert.equal(ignoredFixedTerm.items[0].fixedTermWarning, undefined);
+    assert.match(ignoredFixedTerm.items[0].translation, /agents/);
+    assert.doesNotMatch(ignoredFixedTerm.items[0].translation, /智能体们/);
     await dismissSelectionResult();
     await panel.locator("#tab-glossary").click();
     const agentsEntry = panel.locator(".yidu-glossary-entry").filter({
