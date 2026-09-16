@@ -26,7 +26,6 @@ async function loadSettings() {
       modelHint.textContent = `旧模型名 ${model.value.trim()} 已由 deepseek-flash 取代，建议改后保存；请求失败时请先改这里。`;
       modelHint.classList.add("warning");
     }
-    status.textContent = settings.deepseekApiKey ? "已读取保存的 API Key。" : "请填写 API Key 后保存。";
   } catch {
     status.textContent = "读取设置失败，请重新加载扩展。";
   } finally {
