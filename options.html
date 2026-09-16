@@ -11,16 +11,20 @@
     <header><img class="mark" src="icons/icon-48.png" alt="" width="36" height="36"><div><h1>译读设置</h1><p>密钥仅保存在当前浏览器中。</p></div></header>
     <form id="settingsForm" aria-busy="true">
       <fieldset disabled>
-        <label for="apiKey">DeepSeek API Key</label>
+        <h2 class="section-title">AI 服务</h2>
+        <div class="model-card"><span class="model-name">DeepSeek V4 Flash</span><span class="badge">当前版本支持</span></div>
+        <label for="apiKey">DeepSeek API 密钥</label>
         <input id="apiKey" name="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" required>
+        <p class="hint">译读使用 DeepSeek 模型生成导读、翻译正文和固定译法。<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">创建 DeepSeek API 密钥</a>。</p>
+        <p class="notice">使用 AI 功能时，DeepSeek 会收到网页正文内容。保存前请查看 DeepSeek 的服务条款和价格。</p>
         <label for="model">模型</label>
         <input id="model" name="model" type="text" autocomplete="off" spellcheck="false" value="deepseek-flash" required>
         <p id="modelHint" class="hint">当前默认 deepseek-flash（DeepSeek-V4.1-Flash），也可填 deepseek-v4-pro。</p>
         <label for="apiUrl">API 地址</label>
         <input id="apiUrl" name="apiUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.deepseek.com">
         <p class="hint">默认为 https://api.deepseek.com；使用中转或代理时填写其 OpenAI 兼容地址（不需要 /chat/completions 后缀）。</p>
-        <button type="submit">保存设置</button>
       </fieldset>
+      <button type="submit">保存设置</button>
       <p id="status" aria-live="polite"></p>
     </form>
     <section class="cache">
