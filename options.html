@@ -8,7 +8,7 @@
 </head>
 <body>
   <main>
-    <header><img class="mark" src="icons/icon-48.png" alt="" width="36" height="36"><div><h1>译读设置</h1><p>密钥仅保存在当前浏览器中。</p></div></header>
+    <header><img class="mark" src="icons/icon-48.png" alt="" width="36" height="36"><div><h1>译读设置</h1><p>粘贴 API 密钥后自动保存，仅保存在当前浏览器中。</p></div></header>
     <form id="settingsForm" aria-busy="true">
       <fieldset disabled>
         <h2 class="section-title">AI 服务</h2>
@@ -23,7 +23,6 @@
         <input id="apiUrl" name="apiUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.deepseek.com">
         <p class="hint">已默认填入官方地址 https://api.deepseek.com；使用中转或代理时改为对应的 OpenAI 兼容地址（不需要 /chat/completions 后缀）。</p>
       </fieldset>
-      <button type="submit">保存设置</button>
       <p id="status" aria-live="polite"></p>
     </form>
     <section class="cache">

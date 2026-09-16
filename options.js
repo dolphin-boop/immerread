@@ -35,14 +35,24 @@ async function loadSettings() {
   }
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+form.addEventListener("submit", (event) => event.preventDefault());
+
+let saveTimer = 0;
+function scheduleSave() {
+  if (fieldset.disabled) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSettings, 400);
+}
+for (const field of [apiKey, model, apiUrl]) {
+  field.addEventListener("input", scheduleSave);
+}
+
+async function saveSettings() {
   const values = {
     deepseekApiKey: apiKey.value.trim(),
     deepseekModel: model.value.trim() || getDefaultModel(),
     deepseekApiUrl: apiUrl.value.trim() || DEFAULT_API_BASE
   };
-  fieldset.disabled = true;
   status.textContent = "正在保存…";
   try {
     await chrome.storage.local.set(values);
@@ -51,14 +61,11 @@ form.addEventListener("submit", async (event) => {
       saved.deepseekApiUrl !== values.deepseekApiUrl) {
       throw new Error("保存校验失败");
     }
-    status.textContent = "设置已保存，关闭页面后仍会保留。";
+    status.textContent = "已自动保存，关闭页面后仍会保留。";
   } catch {
     status.textContent = "保存失败，请重新加载扩展后再试。";
-  } finally {
-    fieldset.disabled = false;
-    apiKey.focus();
   }
-});
+}
 
 clearCache.addEventListener("click", async () => {
   clearCache.disabled = true;

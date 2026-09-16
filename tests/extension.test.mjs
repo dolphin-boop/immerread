@@ -132,6 +132,9 @@ test("loads settings before enabling input and verifies persistence", () => {
   assert.match(optionsScript, /fieldset\.disabled = false/);
   assert.match(optionsScript, /deepseekApiUrl/);
   assert.match(optionsScript, /DEFAULT_API_BASE/);
+  assert.match(optionsScript, /addEventListener\("input"/);
+  assert.match(optionsScript, /已自动保存/);
+  assert.doesNotMatch(optionsHtml, /保存设置/);
   assert.match(optionsScript, /CACHE_STORAGE_KEY/);
   assert.match(optionsScript, /SUMMARY_STORAGE_KEY/);
   assert.match(optionsScript, /chrome\.storage\.local\.remove/);
