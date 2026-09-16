@@ -22,6 +22,17 @@ CREAM = (255, 251, 244)
 OUT = Path(__file__).parent
 ROOT = OUT.parent.parent
 
+PALETTES = {
+    # 与 sidepanel --accent #a94f32 / 按钮 #b85f3f 完全同族
+    "terracotta": ((184, 95, 63), (143, 64, 40), (116, 53, 33)),
+    # 介于现亮红与陶土之间的砖红，工具栏更醒目
+    "brick": ((198, 92, 58), (152, 58, 33), (128, 48, 27)),
+    # 更深的焙茶色，最沉稳
+    "roast": ((156, 71, 48), (110, 47, 29), (94, 40, 25)),
+    # 改用 UI 中的灰绿 --success 系，差异化备选
+    "moss": ((96, 130, 113), (63, 94, 78), (51, 78, 65)),
+}
+
 
 def lerp(a, b, t):
     return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
@@ -308,6 +319,17 @@ def save(img, path, size):
 
 
 def main():
+    global TOP, BOTTOM, LINE
+    if "--palette" in sys.argv:
+        name = sys.argv[sys.argv.index("--palette") + 1]
+        if name not in PALETTES:
+            raise SystemExit(f"未知调色板：{name}")
+        TOP, BOTTOM, LINE = PALETTES[name]
+        img = icon_spark_bubble()
+        for size in (128, 48, 16):
+            save(img, OUT / f"variant-pal-{name}-{size}.png", size)
+        print("调色板预览已写入", OUT, name)
+        return
     final = None
     if "--final" in sys.argv:
         final = sys.argv[sys.argv.index("--final") + 1]
