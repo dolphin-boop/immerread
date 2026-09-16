@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DEFAULT_API_BASE,
   buildTranslationMessages,
+  getDefaultModel,
+  normalizeApiBase,
   normalizeTerms,
   parseTranslationResponse
 } from "../lib/translation.js";
@@ -20,10 +23,25 @@ test("builds a rich-text terminology-aware translation prompt", () => {
   assert.match(messages[0].content, /不要逐词直译/);
   assert.match(messages[0].content, /输出前自行润色/);
   assert.match(messages[0].content, /不得省略事实、条件、转折或因果关系/);
+  assert.match(messages[0].content, /定语链/);
+  assert.match(messages[0].content, /主动句/);
+  assert.match(messages[0].content, /地道中文/);
+  assert.match(messages[0].content, /可能看起来像是/);
   assert.match(messages[0].content, /只收录 AI 和机器学习领域/);
   assert.match(messages[0].content, /不要把通用编程/);
   const payload = JSON.parse(messages[1].content);
   assert.equal(payload.segments[0].markup, "An <strong>agent</strong> uses tools.");
+});
+
+test("defaults to the current DeepSeek model and normalizes the API base URL", () => {
+  assert.equal(getDefaultModel(), "deepseek-flash");
+  assert.equal(normalizeApiBase(""), DEFAULT_API_BASE);
+  assert.equal(normalizeApiBase(null), DEFAULT_API_BASE);
+  assert.equal(normalizeApiBase("https://api.deepseek.com/"), "https://api.deepseek.com");
+  assert.equal(normalizeApiBase(" https://relay.example.com/v1/ "), "https://relay.example.com/v1");
+  assert.equal(normalizeApiBase("http://localhost:8080/v1"), "http://localhost:8080/v1");
+  assert.equal(normalizeApiBase("javascript:alert(1)"), DEFAULT_API_BASE);
+  assert.equal(normalizeApiBase("not a url"), DEFAULT_API_BASE);
 });
 
 test("parses fenced JSON and keeps paragraph ids and markup", () => {

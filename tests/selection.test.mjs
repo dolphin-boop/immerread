@@ -24,6 +24,8 @@ test("translation and explanation prompts are separate and concise", () => {
   assert.match(explain[0].content, /中文解释/);
   assert.match(explain[0].content, /1–3 句/);
   assert.match(translate[0].content, /只输出译文/);
+  assert.match(translate[0].content, /母语者/);
+  assert.match(translate[0].content, /定语链/);
   assert.doesNotMatch(explain[1].content, /Private title|Private context/);
   assert.doesNotMatch(translate[1].content, /Private title|Private context/);
   assert.equal(explain[1].content, "选中的英文：evaluation harness");

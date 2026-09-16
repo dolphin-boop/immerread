@@ -8,6 +8,7 @@ import {
 import {
   buildTranslationMessages,
   getDefaultModel,
+  normalizeApiBase,
   parseTranslationResponse
 } from "./lib/translation.js";
 import { SUMMARY_STORAGE_KEY, buildSummaryMessages, makeSummaryKey, parseSummaryResponse, readCachedSummary, saveCachedSummary } from "./lib/summary.js";
@@ -61,6 +62,24 @@ async function getModel() {
   return settings.deepseekModel || getDefaultModel();
 }
 
+async function chatCompletions(settings, body) {
+  const endpoint = normalizeApiBase(settings?.deepseekApiUrl) + "/chat/completions";
+  const send = (extra) => fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.deepseekApiKey}`
+    },
+    body: JSON.stringify({ ...body, ...extra })
+  });
+  const response = await send({ thinking: { type: "disabled" } });
+  if (response.status === 400) {
+    const detail = await response.clone().json().catch(() => null);
+    if (/thinking/i.test(JSON.stringify(detail || ""))) return send({});
+  }
+  return response;
+}
+
 async function getCachedTranslations(payload) {
   try {
     const stored = await chrome.storage.local.get([CACHE_STORAGE_KEY, GLOSSARY_STORAGE_KEY]);
@@ -91,7 +110,7 @@ function putCachedTranslations(payload) {
 
 async function translateBatch(payload) {
   try {
-    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", GLOSSARY_STORAGE_KEY]);
+    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", "deepseekApiUrl", GLOSSARY_STORAGE_KEY]);
     if (!settings.deepseekApiKey) {
       return { ok: false, code: "SETUP_REQUIRED", message: "请先在设置中填写 DeepSeek API Key。" };
     }
@@ -112,18 +131,11 @@ async function translateBatch(payload) {
       if (protectTerms) {
         messages[0].content += "\n原文中的 __YIDU_TERM_数字_数字__ 是固定译法占位符。translation 中必须原样保留全部占位符，不要翻译、替换或删除；扩展会在返回后填入用户指定译法。";
       }
-      const response = await fetch("https://api.deepseek.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.deepseekApiKey}`
-        },
-        body: JSON.stringify({
-          model: settings.deepseekModel || getDefaultModel(),
-          temperature: 0.1,
-          response_format: { type: "json_object" },
-          messages
-        })
+      const response = await chatCompletions(settings, {
+        model: settings.deepseekModel || getDefaultModel(),
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        messages
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => null);
@@ -202,7 +214,7 @@ async function summarizeModule(payload) {
       segments.reduce((count, segment) => count + segment.text.length, 0) > 10000) {
       return { ok: false, message: "当前模块内容无法总结。" };
     }
-    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", SUMMARY_STORAGE_KEY]);
+    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", "deepseekApiUrl", SUMMARY_STORAGE_KEY]);
     const model = settings.deepseekModel || getDefaultModel();
     const key = makeSummaryKey(payload?.url, module, model, payload?.title);
     const cached = readCachedSummary(settings[SUMMARY_STORAGE_KEY], key);
@@ -210,19 +222,12 @@ async function summarizeModule(payload) {
     if (!settings.deepseekApiKey) {
       return { ok: false, code: "SETUP_REQUIRED", message: "请先在设置中填写 DeepSeek API Key。" };
     }
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + settings.deepseekApiKey
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        max_tokens: 1200,
-        response_format: { type: "json_object" },
-        messages: buildSummaryMessages({ articleTitle: payload?.title, module })
-      })
+    const response = await chatCompletions(settings, {
+      model,
+      temperature: 0.2,
+      max_tokens: 1200,
+      response_format: { type: "json_object" },
+      messages: buildSummaryMessages({ articleTitle: payload?.title, module })
     });
     if (!response.ok) {
       const detail = await response.json().catch(() => null);
@@ -246,22 +251,15 @@ async function summarizeModule(payload) {
 async function selectionAction(payload) {
   try {
     const messages = buildSelectionMessages(payload);
-    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel"]);
+    const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", "deepseekApiUrl"]);
     if (!settings.deepseekApiKey) {
       return { ok: false, code: "SETUP_REQUIRED", message: "请先在设置中填写 DeepSeek API Key。" };
     }
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + settings.deepseekApiKey
-      },
-      body: JSON.stringify({
-        model: settings.deepseekModel || getDefaultModel(),
-        temperature: 0.2,
-        max_tokens: 512,
-        messages
-      })
+    const response = await chatCompletions(settings, {
+      model: settings.deepseekModel || getDefaultModel(),
+      temperature: 0.2,
+      max_tokens: 512,
+      messages
     });
     if (!response.ok) {
       const detail = await response.json().catch(() => null);

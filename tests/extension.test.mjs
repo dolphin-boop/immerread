@@ -12,7 +12,7 @@ const panelStyles = await readFile(new URL("sidepanel.css", root), "utf8");
 const optionsHtml = await readFile(new URL("options.html", root), "utf8");
 const optionsScript = await readFile(new URL("options.js", root), "utf8");
 
-test("configures a local Manifest V3 side panel extension", () => {
+test("configures a local Manifest V3 side panel extension", async () => {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.minimum_chrome_version, "114");
   assert.equal(manifest.background.service_worker, "background.js");
@@ -23,10 +23,19 @@ test("configures a local Manifest V3 side panel extension", () => {
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
   assert.ok(manifest.host_permissions.includes("http://*/*"));
   assert.ok(manifest.host_permissions.includes("https://*/*"));
+  assert.equal(manifest.icons["128"], "icons/icon-128.png");
+  assert.equal(manifest.action.default_icon["32"], "icons/icon-32.png");
+  for (const size of [16, 32, 48, 128]) {
+    const file = await readFile(new URL(`icons/icon-${size}.png`, root));
+    assert.ok(file.length > 0);
+  }
   assert.match(background, /openPanelOnActionClick:\s*true/);
   assert.match(background, /chrome\.scripting\.executeScript/);
   assert.match(background, /YIDU_GLOSSARY_UPSERT/);
   assert.match(background, /glossaryForSegments/);
+  assert.match(background, /normalizeApiBase/);
+  assert.match(background, /deepseekApiUrl/);
+  assert.match(background, /thinking:\s*\{\s*type:\s*"disabled"\s*\}/);
 });
 
 test("extracts article semantics without rebuilding the source page", () => {
@@ -112,8 +121,15 @@ test("keeps the panel readable and avoids prohibited visual shortcuts", () => {
 test("loads settings before enabling input and verifies persistence", () => {
   assert.match(optionsHtml, /<fieldset disabled>/);
   assert.match(optionsHtml, /aria-busy="true"/);
+  assert.match(optionsHtml, /id="apiUrl"/);
+  assert.match(optionsHtml, /id="clearCache"/);
+  assert.match(optionsHtml, /type="module" src="options\.js"/);
   assert.match(optionsScript, /await chrome\.storage\.local\.get/);
   assert.match(optionsScript, /await chrome\.storage\.local\.set/);
   assert.match(optionsScript, /保存校验失败/);
   assert.match(optionsScript, /fieldset\.disabled = false/);
+  assert.match(optionsScript, /deepseekApiUrl/);
+  assert.match(optionsScript, /CACHE_STORAGE_KEY/);
+  assert.match(optionsScript, /SUMMARY_STORAGE_KEY/);
+  assert.match(optionsScript, /chrome\.storage\.local\.remove/);
 });
