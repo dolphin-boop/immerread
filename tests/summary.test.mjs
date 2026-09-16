@@ -43,23 +43,28 @@ test("summary prompt limits the model to the current module and validates struct
   assert.match(messages[0].content, /不要概括未提供的章节/);
   assert.doesNotMatch(messages[0].content, /固定译法/);
   assert.doesNotMatch(messages[1].content, /glossary|url|Other chapter/);
-  assert.deepEqual(parseSummaryResponse('{"title":"评测方法","summary":"介绍评测方法。","points":["方法一","方法二"]}'), {
-    title: "评测方法", summary: "介绍评测方法。", points: ["方法一", "方法二"]
+  assert.deepEqual(parseSummaryResponse('{"title":"评测方法","summary":"介绍评测方法。后面是多余细节。","points":["多余要点"]}'), {
+    title: "评测方法", summary: "介绍评测方法。"
   });
-  assert.throws(() => parseSummaryResponse('{"title":"","summary":"","points":[]}'), /格式不正确/);
-  assert.throws(() => parseSummaryResponse('{"title":"模块","summary":"概述","points":[{"text":"要点"}]}'), /格式不正确/);
+  assert.deepEqual(parseSummaryResponse('{"result":{"heading":"评测方法","overview":"简短概述"}}'), {
+    title: "评测方法", summary: "简短概述"
+  });
+  assert.deepEqual(parseSummaryResponse('{"content":"简短概述"}', "Methods"), {
+    title: "Methods", summary: "简短概述"
+  });
+  assert.throws(() => parseSummaryResponse('{"title":"","summary":""}'), /格式不正确/);
 });
 
 test("summary cache changes with source text and expires", () => {
   const module = { title: "Methods", segments: [{ kind: "paragraph", text: "Source" }] };
   const key = makeSummaryKey("https://example.com/a#part", module, "deepseek-chat");
-  const cache = saveCachedSummary({}, key, { title: "模块", summary: "概述", points: ["要点"] }, 100);
-  assert.deepEqual(readCachedSummary(cache, key, 101), { title: "模块", summary: "概述", points: ["要点"] });
-  const updated = saveCachedSummary(cache, key, { title: "新模块", summary: "新概述", points: ["新要点"] }, 102);
-  assert.deepEqual(readCachedSummary(updated, key, 103), { title: "新模块", summary: "新概述", points: ["新要点"] });
+  const cache = saveCachedSummary({}, key, { title: "模块", summary: "概述" }, 100);
+  assert.deepEqual(readCachedSummary(cache, key, 101), { title: "模块", summary: "概述" });
+  const updated = saveCachedSummary(cache, key, { title: "新模块", summary: "新概述" }, 102);
+  assert.deepEqual(readCachedSummary(updated, key, 103), { title: "新模块", summary: "新概述" });
   assert.equal(readCachedSummary(cache, key, 100 + 31 * 24 * 60 * 60 * 1000), null);
   assert.equal(readCachedSummary({ entries: { [key]: { updatedAt: 100,
-    result: { title: "损坏", summary: "损坏", points: null } } } }, key, 101), null);
+    result: { title: "", summary: "损坏" } } } }, key, 101), null);
   assert.notEqual(key, makeSummaryKey("https://example.com/a", { ...module,
     segments: [{ kind: "paragraph", text: "Changed" }] }, "deepseek-chat"));
   assert.notEqual(makeSummaryKey("https://example.com/a", module, "deepseek-chat", "Old title"),

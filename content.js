@@ -252,15 +252,14 @@
   document.addEventListener("keyup", (event) => {
     emitSelectionSync();
     if (event.key === "Escape") {
-      hideSelectionUi();
+      dismissSelectionUi();
       return;
     }
     onSelectionChange();
   });
   document.addEventListener("pointerdown", (event) => {
-    if (selectionRoot && event.target !== selectionRoot && !selectionRoot.contains(event.target)) {
-      hideSelectionUi();
-    }
+    if (!selectionShadow?.querySelector(".yidu-menu,.yidu-result")) return;
+    if (!event.composedPath().includes(selectionRoot)) dismissSelectionUi();
   }, true);
 
   function onSelectionChange(event) {
@@ -323,11 +322,9 @@
       ".yidu-menu{display:flex;gap:4px;padding:5px}",
       ".yidu-menu button{border:0;background:transparent;border-radius:7px;padding:7px 13px;color:#25201d;font-size:14px}",
       ".yidu-menu button:hover{background:#f4e8df}",
-      ".yidu-menu button:focus-visible,.yidu-close:focus-visible,.yidu-save:focus-visible,.yidu-reload:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}",
+      ".yidu-menu button:focus-visible,.yidu-save:focus-visible,.yidu-reload:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}",
       ".yidu-result{width:min(370px,calc(100vw - 24px));max-height:min(440px,calc(100vh - 24px));overflow:auto;overscroll-behavior:contain;padding:16px;box-sizing:border-box}",
-      ".yidu-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#a45032;font-size:14px;font-weight:700}",
-      ".yidu-close{border:0;background:transparent;color:#61544e;font-size:22px;line-height:1;padding:2px 7px;border-radius:6px}",
-      ".yidu-close:hover{background:#f4e8df}",
+      ".yidu-head{color:#a45032;font-size:14px;font-weight:700}",
       ".yidu-source{font-size:12px;color:#786c64;margin:12px 0;border-bottom:1px solid #eee5dd;padding-bottom:10px;overflow-wrap:anywhere}",
       ".yidu-body{font-size:15px;line-height:1.7;color:#25201d;white-space:pre-wrap;overflow-wrap:anywhere}",
       ".yidu-error{color:#a33f27}",
@@ -388,13 +385,7 @@
     head.className = "yidu-head";
     const heading = document.createElement("strong");
     heading.textContent = "固定译法";
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "yidu-close";
-    close.setAttribute("aria-label", "关闭");
-    close.textContent = "×";
-    close.addEventListener("click", hideSelectionUi);
-    head.append(heading, close);
+    head.append(heading);
     const source = document.createElement("p");
     source.className = "yidu-source";
     source.textContent = text;
@@ -476,13 +467,7 @@
     head.className = "yidu-head";
     const heading = document.createElement("strong");
     heading.textContent = action === "translate" ? "翻译" : "解释";
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "yidu-close";
-    close.setAttribute("aria-label", "关闭");
-    close.textContent = "×";
-    close.addEventListener("click", hideSelectionUi);
-    head.append(heading, close);
+    head.append(heading);
     const source = document.createElement("p");
     source.className = "yidu-source";
     source.textContent = text;
@@ -493,7 +478,6 @@
     box.append(head, source, body);
     selectionShadow.append(box);
     place(box, rect, 10);
-    close.focus();
     try {
       const response = await chrome.runtime.sendMessage({
         type: "YIDU_SELECTION_ACTION",
@@ -515,6 +499,14 @@
       }
     }
     place(box, rect, 10);
+  }
+
+  function dismissSelectionUi() {
+    hideSelectionUi();
+    window.getSelection()?.removeAllRanges();
+    selectedText = "";
+    selectedRect = null;
+    emitSelectionSync(true);
   }
 
   function hideSelectionUi() {

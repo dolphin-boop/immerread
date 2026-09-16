@@ -139,7 +139,9 @@ async function translateBatch(payload) {
       const retryIds = new Set(missing.map((term) => term.id));
       const retryOriginal = segments.filter((segment) => retryIds.has(String(segment.id)));
       const retry = prepareFixedTermRetry(fixedGlossary, retryOriginal);
-      const repaired = restoreFixedTermRetry(await requestTranslations(retry.segments, true), retry.replacements);
+      const retried = await requestTranslations(retry.segments, true);
+      const initialById = new Map(items.map((item) => [String(item.id), item]));
+      const repaired = restoreFixedTermRetry(retried, retry.replacements, initialById);
       const byId = new Map(repaired.map((item) => [item.id, item]));
       items = items.map((item) => byId.get(item.id) || item);
     }
@@ -227,7 +229,7 @@ async function summarizeModule(payload) {
       throw new Error(detail?.error?.message || "DeepSeek 请求失败（" + response.status + "）");
     }
     const body = await response.json();
-    const result = parseSummaryResponse(body?.choices?.[0]?.message?.content);
+    const result = parseSummaryResponse(body?.choices?.[0]?.message?.content, module.title);
     summaryWriteChain = summaryWriteChain.catch(() => undefined).then(async () => {
       const stored = await chrome.storage.local.get(SUMMARY_STORAGE_KEY);
       await chrome.storage.local.set({

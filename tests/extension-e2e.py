@@ -57,12 +57,11 @@ try:
                         globalThis.__yiduFetchCalls += 1;
                         const request = JSON.parse(options.body);
                         const input = JSON.parse(request.messages[1].content);
-                        if (request.messages[0].content.includes("英文技术文章总结助手")) {
+                        if (request.messages[0].content.includes("结构化导读助手")) {
                           return new Response(JSON.stringify({
                             choices: [{ message: { content: JSON.stringify({
                               title: "评测基础",
-                              summary: "该模块概述。",
-                              points: ["主要方法", "实践限制"]
+                              summary: "该模块概述。"
                             }) } }]
                           }), { status: 200, headers: { "Content-Type": "application/json" } });
                         }

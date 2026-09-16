@@ -38,6 +38,8 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /overscroll-behavior:contain/);
   assert.match(content, /刷新当前网页后重试/);
   assert.match(content, /yidu-selection-root/);
+  assert.match(content, /dismissSelectionUi/);
+  assert.doesNotMatch(content, /className = "yidu-close"|close\.textContent = "×"/);
   assert.match(content, /requestAnimationFrame/);
   assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li/);
   assert.match(content, /<strong>/);
@@ -89,6 +91,7 @@ test("renders progressive rich translations in the side panel", () => {
 
 test("keeps the panel readable and avoids prohibited visual shortcuts", () => {
   assert.match(panelStyles, /\.yidu-h1/);
+  assert.match(panelStyles, /\.yidu-controls\{position:sticky;top:58px/);
   assert.doesNotMatch(panelStyles, /\.yidu-term\{|\.yidu-term-toggle/);
   assert.match(panelStyles, /\.yidu-blockquote/);
   assert.match(panelStyles, /\.yidu-list/);

@@ -188,14 +188,7 @@ import { groupArticleModules } from "./lib/summary.js";
       const summary = document.createElement("p");
       summary.className = "yidu-summary-overview";
       summary.textContent = outcome.result.summary;
-      const points = document.createElement("ul");
-      points.className = "yidu-summary-points";
-      for (const point of outcome.result.points) {
-        const item = document.createElement("li");
-        item.textContent = point;
-        points.append(item);
-      }
-      body.replaceChildren(summary, points);
+      body.replaceChildren(summary);
       updateSummaryProgress(current);
     } catch (error) {
       if (!current.stopped) {

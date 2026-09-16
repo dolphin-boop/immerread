@@ -59,7 +59,10 @@ test("repairs a model response that translated a locked English term into Chines
   const repaired = restoreFixedTermRetry([{ id: "title", translation: "揭开 <strong>AI __YIDU_TERM_0_0__</strong> 评测的神秘面纱", terms: [] }], retry.replacements);
   assert.match(repaired[0].translation, /<strong>AI agents<\/strong>/);
   assert.deepEqual(missingFixedTerms(glossary, segments, repaired), []);
-  assert.throws(() => restoreFixedTermRetry(initial, retry.replacements), /未保留固定译法/);
+  const fallback = new Map([["title", initial[0]]]);
+  const ignoredPlaceholder = restoreFixedTermRetry(initial, retry.replacements, fallback);
+  assert.equal(ignoredPlaceholder[0].translation, initial[0].translation);
+  assert.equal(ignoredPlaceholder[0].fixedTermWarning, "agents");
 });
 
 test("protects longer terms first and escapes user-selected HTML-like targets", () => {

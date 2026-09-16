@@ -39,7 +39,7 @@ const server = http.createServer((_request, response) => {
       globalThis.fetch = async (_url, options) => {
         const request = JSON.parse(options.body);
         if (request.response_format) {
-          if (request.messages[0].content.includes("英文技术文章总结助手")) {
+          if (request.messages[0].content.includes("结构化导读助手")) {
             globalThis.yiduSummaryRequests = (globalThis.yiduSummaryRequests || 0) + 1;
             const input = JSON.parse(request.messages[1].content);
             globalThis.yiduSummaryInput = input;
@@ -54,8 +54,7 @@ const server = http.createServer((_request, response) => {
             return new Response(JSON.stringify({
               choices: [{ message: { content: JSON.stringify({
                 title: input.moduleTitle === "Conclusion" ? "结论" : "评测入门",
-                summary: "概述：" + input.moduleTitle,
-                points: ["评测方法", "实践限制"]
+                summary: "概述：" + input.moduleTitle + "。后续不应显示的详细复述。"
               }) } }]
             }), { status: 200 });
           }
@@ -71,8 +70,10 @@ const server = http.createServer((_request, response) => {
           if (locked) await new Promise((resolve) => setTimeout(resolve, 400));
           const items = input.segments.map((segment) => ({
             id: segment.id,
-            translation: (segment.kind === "h1" ? ":" : "") + (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
-              + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们")),
+            translation: protectedTerms && globalThis.yiduDropProtectedToken
+              ? "模型忽略了固定译法占位符"
+              : (segment.kind === "h1" ? ":" : "") + (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
+                + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们")),
             terms: []
           }));
           return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
@@ -103,6 +104,13 @@ const server = http.createServer((_request, response) => {
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
     assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
     assert.equal(await panel.locator("#term-toggle").count(), 0);
+    await panel.setViewportSize({ width: 460, height: 360 });
+    await panel.evaluate(() => window.scrollTo(0, 700));
+    await panel.waitForFunction(() => window.scrollY > 100);
+    const stickyTabsTop = await panel.locator(".yidu-controls").evaluate((element) => element.getBoundingClientRect().top);
+    assert.ok(Math.abs(stickyTabsTop - 58) < 1, "三个页签滚动时应固定在标题栏下方");
+    await panel.evaluate(() => window.scrollTo(0, 0));
+    await panel.setViewportSize({ width: 1280, height: 720 });
     assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 0,
       "打开总结页签前不得发送文章总结请求");
     await worker.evaluate(() => {
@@ -123,6 +131,9 @@ const server = http.createServer((_request, response) => {
     await panel.locator("#view-summary .yidu-summary-overview").filter({
       hasText: "概述：Demystifying evals for AI agents"
     }).waitFor();
+    assert.equal(await panel.locator("#view-summary .yidu-summary-points").count(), 0);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-overview").first().textContent(),
+      "概述：Demystifying evals for AI agents。");
     const conclusion = panel.locator("#view-summary .yidu-summary-module").filter({ hasText: "Conclusion" });
     await conclusion.locator(".yidu-summary-failure").filter({ hasText: "临时总结失败" }).waitFor();
     assert.equal(await worker.evaluate(() => globalThis.yiduSummaryRequests || 0), 2);
@@ -180,6 +191,14 @@ const server = http.createServer((_request, response) => {
     assert.ok(longIndex > 0 && longIds.length > 1, "长段落应拆分为多条译文");
 
 
+    async function dismissSelectionResult() {
+      assert.equal(await page.locator("#yidu-selection-root .yidu-close").count(), 0);
+      await page.mouse.click(2, 2);
+      await page.locator("#yidu-selection-root .yidu-result").waitFor({ state: "detached" });
+      assert.equal(await page.locator("#yidu-selection-root .yidu-menu").count(), 0,
+        "关闭结果后不得重新出现三个功能");
+    }
+
     async function selectIntro() {
       await page.evaluate(() => {
         const node = document.querySelector("#intro").firstChild;
@@ -203,8 +222,7 @@ const server = http.createServer((_request, response) => {
 
     await page.locator("#yidu-selection-root .yidu-body").filter({ hasText: "评测框架。" }).waitFor();
     assert.match(await page.locator("#yidu-selection-root .yidu-result").textContent(), /翻译/);
-    await page.locator("#yidu-selection-root .yidu-close").click();
-    assert.equal(await page.locator("#yidu-selection-root .yidu-result").count(), 0);
+    await dismissSelectionResult();
 
     await selectIntro();
     await page.locator("#yidu-selection-root .yidu-menu button").nth(1).click();
@@ -291,7 +309,7 @@ const server = http.createServer((_request, response) => {
     }));
     assert.ok(anotherArticle.ok);
     assert.match(anotherArticle.items[0].translation, /新术语译文/, "新文章应沿用已保存术语");
-    await page.locator("#yidu-selection-root .yidu-close").click();
+    await dismissSelectionResult();
     const headingId = extracted.article.segments.find((segment) => segment.text.startsWith("Demystifying evals for AI agents")).id;
     const pluralId = extracted.article.segments.find((segment) => segment.text.startsWith("Good evaluations")).id;
     await panel.locator('.yidu-segment[data-segment-id="' + headingId + '"][data-translated="true"]').waitFor();
@@ -319,7 +337,20 @@ const server = http.createServer((_request, response) => {
     await panel.locator(".yidu-error").waitFor({ state: "detached" });
     assert.ok(await worker.evaluate(() => globalThis.yiduProtectedRetries > 0), "模型首次忽略固定译法时应以占位符重试");
     assert.equal((await worker.evaluate(async () => (await chrome.storage.local.get("yiduGlossaryV1")).yiduGlossaryV1)).entries.agents.target, "agents");
-    await page.locator("#yidu-selection-root .yidu-close").click();
+    await worker.evaluate(() => { globalThis.yiduDropProtectedToken = true; });
+    const ignoredFixedTerm = await panel.evaluate(async () => chrome.runtime.sendMessage({
+      type: "YIDU_TRANSLATE_BATCH",
+      payload: {
+        title: "Placeholder failure",
+        segments: [{ id: "fallback", kind: "paragraph", text: "agents improve", markup: "agents improve", links: [] }],
+        glossary: {}
+      }
+    }));
+    await worker.evaluate(() => { globalThis.yiduDropProtectedToken = false; });
+    assert.equal(ignoredFixedTerm.ok, true, "模型忽略占位符时不得让整批翻译失败");
+    assert.equal(ignoredFixedTerm.items[0].fixedTermWarning, "agents");
+    assert.match(ignoredFixedTerm.items[0].translation, /^复数旧译文：/);
+    await dismissSelectionResult();
     await panel.locator("#tab-glossary").click();
     const agentsEntry = panel.locator(".yidu-glossary-entry").filter({
       has: panel.locator(".yidu-glossary-words strong").getByText("agents", { exact: true })
@@ -334,7 +365,7 @@ const server = http.createServer((_request, response) => {
     await page.locator("#yidu-selection-root .yidu-menu button").first().click();
     await page.locator("#yidu-selection-root .yidu-error").filter({ hasText: "DeepSeek API Key" }).waitFor();
     assert.equal(await page.locator("#yidu-selection-root .yidu-settings").textContent(), "打开设置");
-    await page.locator("#yidu-selection-root .yidu-close").click();
+    await dismissSelectionResult();
     await worker.evaluate(() => {
       setTimeout(() => chrome.runtime.reload(), 30);
       return true;
