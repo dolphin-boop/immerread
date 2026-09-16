@@ -137,7 +137,7 @@ test("loads settings before enabling input and verifies persistence", () => {
   assert.match(optionsScript, /\/models/);
   assert.match(optionsScript, /密钥验证通过/);
   assert.match(optionsScript, /密钥无效/);
-  assert.match(optionsHtml, /id="toast"/);
+  assert.doesNotMatch(optionsHtml, /id="toast"/);
   assert.doesNotMatch(optionsHtml, /保存设置/);
   assert.match(optionsScript, /CACHE_STORAGE_KEY/);
   assert.match(optionsScript, /SUMMARY_STORAGE_KEY/);

@@ -11,35 +11,31 @@ const status = document.getElementById("status");
 const clearCache = document.getElementById("clearCache");
 const cacheStatus = document.getElementById("cacheStatus");
 const fieldset = form.querySelector("fieldset");
-const toast = document.getElementById("toast");
 
-let toastTimer = 0;
-function showToast(message, kind) {
-  toast.textContent = message;
-  toast.className = `toast ${kind}`;
-  toast.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.hidden = true; }, 4000);
+function setStatus(message, kind = "") {
+  status.textContent = message;
+  status.className = kind;
 }
-toast.addEventListener("click", () => { toast.hidden = true; });
 
 let lastValidatedKey = "";
 async function validateApiKey(key, base) {
-  if (!key || key === lastValidatedKey) return;
+  if (!key) return;
+  setStatus("已自动保存，正在验证密钥…");
+  if (key === lastValidatedKey) return;
   lastValidatedKey = key;
   try {
     const response = await fetch(normalizeApiBase(base) + "/models", {
       headers: { Authorization: `Bearer ${key}` }
     });
     if (response.ok) {
-      showToast("API 密钥验证通过，可以开始使用了。", "success");
+      setStatus("已自动保存，密钥验证通过。", "ok");
     } else if (response.status === 401 || response.status === 403) {
-      showToast("API 密钥无效，请检查是否复制完整。", "error");
+      setStatus("已自动保存，但 API 密钥无效，请检查是否复制完整。", "error");
     } else {
-      showToast(`密钥验证失败（HTTP ${response.status}），请稍后重试。`, "error");
+      setStatus(`已自动保存，但密钥验证失败（HTTP ${response.status}）。`, "error");
     }
   } catch {
-    showToast("无法连接 API 地址，请检查网络或 API 地址设置。", "error");
+    setStatus("已自动保存，但无法连接 API 地址，请检查网络或地址设置。", "error");
   }
 }
 
@@ -58,7 +54,7 @@ async function loadSettings() {
       modelHint.classList.add("warning");
     }
   } catch {
-    status.textContent = "读取设置失败，请重新加载扩展。";
+    setStatus("读取设置失败，请重新加载扩展。", "error");
   } finally {
     fieldset.disabled = false;
     form.setAttribute("aria-busy", "false");
@@ -83,7 +79,7 @@ async function saveSettings() {
     deepseekModel: model.value.trim() || getDefaultModel(),
     deepseekApiUrl: apiUrl.value.trim() || DEFAULT_API_BASE
   };
-  status.textContent = "正在保存…";
+  setStatus("正在保存…");
   try {
     await chrome.storage.local.set(values);
     const saved = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", "deepseekApiUrl"]);
@@ -91,10 +87,13 @@ async function saveSettings() {
       saved.deepseekApiUrl !== values.deepseekApiUrl) {
       throw new Error("保存校验失败");
     }
-    status.textContent = "已自动保存，关闭页面后仍会保留。";
-    void validateApiKey(values.deepseekApiKey, values.deepseekApiUrl);
+    if (values.deepseekApiKey) {
+      void validateApiKey(values.deepseekApiKey, values.deepseekApiUrl);
+    } else {
+      setStatus("已自动保存，关闭页面后仍会保留。", "ok");
+    }
   } catch {
-    status.textContent = "保存失败，请重新加载扩展后再试。";
+    setStatus("保存失败，请重新加载扩展后再试。", "error");
   }
 }
 
