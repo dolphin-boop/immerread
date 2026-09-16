@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 S = 1024
-MARGIN = 48
+MARGIN = 0
 RADIUS = 224
 TOP = (198, 92, 58)      # C65C3A
 BOTTOM = (152, 58, 33)   # 983A21
