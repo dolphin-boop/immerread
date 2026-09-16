@@ -35,6 +35,8 @@ test("configures a local Manifest V3 side panel extension", async () => {
   assert.match(background, /glossaryForSegments/);
   assert.match(background, /normalizeApiBase/);
   assert.match(background, /deepseekApiUrl/);
+  assert.match(background, /onInstalled/);
+  assert.match(background, /openOptionsPage/);
   assert.match(background, /thinking:\s*\{\s*type:\s*"disabled"\s*\}/);
 });
 
@@ -129,6 +131,7 @@ test("loads settings before enabling input and verifies persistence", () => {
   assert.match(optionsScript, /保存校验失败/);
   assert.match(optionsScript, /fieldset\.disabled = false/);
   assert.match(optionsScript, /deepseekApiUrl/);
+  assert.match(optionsScript, /DEFAULT_API_BASE/);
   assert.match(optionsScript, /CACHE_STORAGE_KEY/);
   assert.match(optionsScript, /SUMMARY_STORAGE_KEY/);
   assert.match(optionsScript, /chrome\.storage\.local\.remove/);

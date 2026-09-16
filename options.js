@@ -1,6 +1,6 @@
 import { CACHE_STORAGE_KEY } from "./lib/cache.js";
 import { SUMMARY_STORAGE_KEY } from "./lib/summary.js";
-import { getDefaultModel } from "./lib/translation.js";
+import { DEFAULT_API_BASE, getDefaultModel } from "./lib/translation.js";
 
 const form = document.getElementById("settingsForm");
 const apiKey = document.getElementById("apiKey");
@@ -21,7 +21,7 @@ async function loadSettings() {
     const settings = await chrome.storage.local.get(["deepseekApiKey", "deepseekModel", "deepseekApiUrl"]);
     apiKey.value = settings.deepseekApiKey || "";
     model.value = settings.deepseekModel || getDefaultModel();
-    apiUrl.value = settings.deepseekApiUrl || "";
+    apiUrl.value = settings.deepseekApiUrl || DEFAULT_API_BASE;
     if (LEGACY_MODELS.has(model.value.trim())) {
       modelHint.textContent = `旧模型名 ${model.value.trim()} 已由 deepseek-flash 取代，建议改后保存；请求失败时请先改这里。`;
       modelHint.classList.add("warning");
@@ -40,7 +40,7 @@ form.addEventListener("submit", async (event) => {
   const values = {
     deepseekApiKey: apiKey.value.trim(),
     deepseekModel: model.value.trim() || getDefaultModel(),
-    deepseekApiUrl: apiUrl.value.trim()
+    deepseekApiUrl: apiUrl.value.trim() || DEFAULT_API_BASE
   };
   fieldset.disabled = true;
   status.textContent = "正在保存…";

@@ -19,6 +19,10 @@ let summaryWriteChain = Promise.resolve();
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
 
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") void chrome.runtime.openOptionsPage();
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "YIDU_OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
