@@ -9,7 +9,7 @@ import math
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 S = 1024
 MARGIN = 48
@@ -162,11 +162,143 @@ def icon_cycle():
     return Image.alpha_composite(img, ov)
 
 
+def page_layer(width, height, radius, angle, center):
+    page = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    ImageDraw.Draw(page).rounded_rectangle([0, 0, width - 1, height - 1],
+                                           radius=radius, fill=CREAM)
+    rotated = page.rotate(angle, expand=True, resample=Image.BICUBIC)
+    ov = layer()
+    ov.paste(rotated, (round(center[0] - rotated.width / 2),
+                       round(center[1] - rotated.height / 2)), rotated)
+    return ov
+
+
+def icon_simple_book():
+    img = base_tile()
+    img = Image.alpha_composite(img, page_layer(224, 336, 40, 13, (400, 512)))
+    img = Image.alpha_composite(img, page_layer(224, 336, 40, -13, (624, 512)))
+    return img
+
+
+def icon_simple_bubble():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    d.rounded_rectangle([296, 304, 728, 600], radius=72, fill=CREAM)
+    d.polygon([(392, 592), (488, 592), (424, 704)], fill=CREAM)
+    img = Image.alpha_composite(img, ov)
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    bar(d, 384, 412, 576, 44, LINE)
+    bar(d, 384, 504, 640, 44, LINE)
+    return Image.alpha_composite(img, ov)
+
+
+def icon_simple_swap():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    bar(d, 300, 420, 668, 60, CREAM)
+    d.polygon([(616, 352), (616, 488), (756, 420)], fill=CREAM)
+    bar(d, 356, 604, 724, 60, CREAM)
+    d.polygon([(408, 536), (408, 672), (268, 604)], fill=CREAM)
+    return Image.alpha_composite(img, ov)
+
+
+def icon_a_wen():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    fa = ImageFont.truetype(f"{FONTS}/arialbd.ttf", 470)
+    fz = ImageFont.truetype(f"{FONTS}/msyhbd.ttc", 430)
+    d.text((368, 470), "A", font=fa, fill=CREAM, anchor="mm")
+    d.text((672, 566), "文", font=fz, fill=CREAM, anchor="mm")
+    return Image.alpha_composite(img, ov)
+
+
+def sparkle(d, cx, cy, r, fill):
+    pts = []
+    for i in range(8):
+        ang = math.pi / 4 * i - math.pi / 2
+        rad = r if i % 2 == 0 else r * 0.28
+        pts.append((cx + rad * math.cos(ang), cy + rad * math.sin(ang)))
+    d.polygon(pts, fill=fill)
+
+
+def icon_spark_bubble():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    d.rounded_rectangle([264, 360, 712, 696], radius=72, fill=CREAM)
+    d.polygon([(368, 688), (464, 688), (400, 792)], fill=CREAM)
+    img = Image.alpha_composite(img, ov)
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    bar(d, 352, 472, 552, 44, LINE)
+    bar(d, 352, 564, 616, 44, LINE)
+    sparkle(d, 742, 300, 96, CREAM)
+    sparkle(d, 820, 396, 52, CREAM)
+    return Image.alpha_composite(img, ov)
+
+
+def icon_globe():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    cx, cy, r, w = 512, 512, 216, 52
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=CREAM, width=w)
+    rx = 96
+    d.ellipse([cx - rx, cy - r, cx + rx, cy + r], outline=CREAM, width=w)
+    d.line([cx - r + 14, cy, cx + r - 14, cy], fill=CREAM, width=w)
+    return Image.alpha_composite(img, ov)
+
+
+def icon_zi_badge():
+    img = base_tile()
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    d.ellipse([256, 256, 768, 768], fill=CREAM)
+    img = Image.alpha_composite(img, ov)
+    ov = layer()
+    d = ImageDraw.Draw(ov)
+    font = ImageFont.truetype(f"{FONTS}/msyhbd.ttc", 380)
+    d.text((512, 500), "译", font=font, fill=BOTTOM, anchor="mm")
+    return Image.alpha_composite(img, ov)
+
+
+def text_icon(font_path, weight=None, size=620, dy=0):
+    def build():
+        img = base_tile()
+        ov = layer()
+        d = ImageDraw.Draw(ov)
+        font = ImageFont.truetype(font_path, size)
+        if weight is not None:
+            try:
+                font.set_variation_by_axes([weight])
+            except Exception:
+                pass
+        d.text((512, 520 + dy), "译", font=font, fill=CREAM, anchor="mm")
+        return Image.alpha_composite(img, ov)
+    return build
+
+
+FONTS = "C:/Windows/Fonts"
 VARIANTS = {
     "book": icon_book,
     "bubbles": icon_bubbles,
     "panel": icon_panel,
     "cycle": icon_cycle,
+    "simple-book": icon_simple_book,
+    "simple-bubble": icon_simple_bubble,
+    "simple-swap": icon_simple_swap,
+    "a-wen": icon_a_wen,
+    "spark-bubble": icon_spark_bubble,
+    "globe": icon_globe,
+    "zi-badge": icon_zi_badge,
+    "zi-kai": text_icon(f"{FONTS}/simkai.ttf"),
+    "zi-song": text_icon(f"{FONTS}/simsun.ttc"),
+    "zi-serif": text_icon(f"{FONTS}/NotoSerifSC-VF.ttf", weight=700),
+    "zi-hei": text_icon(f"{FONTS}/msyhbd.ttc"),
 }
 
 
@@ -185,6 +317,7 @@ def main():
         img = build()
         save(img, OUT / f"variant-{name}-128.png", 128)
         save(img, OUT / f"variant-{name}-48.png", 48)
+        save(img, OUT / f"variant-{name}-16.png", 16)
         if name == final:
             for size in (16, 32, 48, 128):
                 save(img, ROOT / "icons" / f"icon-{size}.png", size)
