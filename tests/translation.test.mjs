@@ -16,6 +16,10 @@ test("builds a rich-text terminology-aware translation prompt", () => {
   assert.match(messages[0].content, /agent => 智能体/);
   assert.match(messages[0].content, /原样保留这些标记/);
   assert.match(messages[0].content, /不得新增其他 HTML/);
+  assert.match(messages[0].content, /按中文习惯重组句式/);
+  assert.match(messages[0].content, /不要逐词直译/);
+  assert.match(messages[0].content, /输出前自行润色/);
+  assert.match(messages[0].content, /不得省略事实、条件、转折或因果关系/);
   assert.match(messages[0].content, /只收录 AI 和机器学习领域/);
   assert.match(messages[0].content, /不要把通用编程/);
   const payload = JSON.parse(messages[1].content);
