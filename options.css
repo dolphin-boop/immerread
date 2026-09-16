@@ -10,9 +10,6 @@ form{display:block}
 fieldset{display:grid;gap:10px;min-width:0;margin:0;padding:28px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.5),0 12px 32px rgba(65,48,31,.08)}
 fieldset:disabled{opacity:.66}
 .section-title{margin:0 0 6px;font:600 24px/1.3 var(--font-serif)}
-.model-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;padding:16px 18px;border-radius:12px;background:var(--tint)}
-.model-name{font:600 18px/1.3 var(--font-serif)}
-.badge{flex:none;padding:5px 13px;border-radius:999px;background:#fff;color:var(--accent-deep);font-size:12px;font-weight:600;box-shadow:0 0 0 1px rgba(169,79,50,.18)}
 label{margin-top:10px;font-weight:600}
 input{width:100%;min-height:46px;border:1px solid #cfc7b9;border-radius:10px;background:#fff;padding:10px 14px;color:var(--ink);font:inherit}
 input:focus-visible,button:focus-visible{outline:3px solid rgba(39,107,166,.35);outline-offset:2px}
