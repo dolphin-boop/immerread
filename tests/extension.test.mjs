@@ -57,6 +57,7 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.match(content, /h1, h2, h3, h4, h5, h6, p, blockquote, li, td, th/);
   assert.match(content, /YIDU_RENDER_CELLS/);
   assert.match(content, /yidu-cell-translation/);
+  assert.match(content, /splitCellLines/);
   assert.doesNotMatch(content, /getComputedStyle\(parent\)/);
   assert.match(content, /<strong>/);
   assert.match(content, /<u>/);

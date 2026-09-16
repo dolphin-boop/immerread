@@ -86,6 +86,27 @@
       const semanticParent = node.parentElement?.closest("blockquote, li");
       if (semanticParent && semanticParent !== node) continue;
       if (node.matches("td, th") && node.querySelector("h1, h2, h3, h4, h5, h6, p, blockquote, li")) continue;
+      if (node.matches("td, th")) {
+        const lines = splitCellLines(node);
+        if (lines) {
+          for (const line of lines) {
+            const linePrepared = prepareBlock(line);
+            const lineText = readableText(linePrepared);
+            if (lineText.length < 2) continue;
+            const lineSerialized = serializeInline(linePrepared);
+            const segment = {
+              id: "s" + (segments.length + 1),
+              kind: "cell",
+              text: lineText,
+              markup: lineSerialized.markup,
+              links: lineSerialized.links
+            };
+            segments.push(segment);
+            nextTrackedBlocks.push({ id: segment.id, ids: [segment.id], node: line, kind: "cell" });
+          }
+          continue;
+        }
+      }
       let kind = getBlockKind(node);
       if (node.closest("table, [role='table'], [role='grid']")) kind = "cell";
       const prepared = prepareBlock(node);
@@ -163,6 +184,34 @@
     }
     return componentRoot;
   }
+  function splitCellLines(node) {
+    const childElements = [...node.children].filter((child) => readableText(child).length >= 2);
+    if (childElements.length >= 2 &&
+      childElements.every((child) => !child.querySelector("h1, h2, h3, h4, h5, h6, p, blockquote, li, td, th"))) {
+      return childElements;
+    }
+    if (!node.querySelector("br")) return null;
+    const groups = [[]];
+    for (const child of [...node.childNodes]) {
+      if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "BR") {
+        groups.push([]);
+        continue;
+      }
+      groups[groups.length - 1].push(child);
+    }
+    const meaningful = groups.filter((group) =>
+      group.some((item) => (item.textContent || "").trim().length >= 2));
+    if (meaningful.length < 2) return null;
+    return meaningful.map((group) => {
+      const wrapper = document.createElement("span");
+      wrapper.className = "yidu-cell-line";
+      wrapper.style.display = "block";
+      group[0].before(wrapper);
+      wrapper.append(...group);
+      return wrapper;
+    });
+  }
+
   function stripTags(markup) {
     const template = document.createElement("template");
     template.innerHTML = String(markup || "");
