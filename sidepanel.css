@@ -28,7 +28,7 @@
 .yidu-glossary-actions button:hover{text-decoration:underline}
 @media(max-width:330px){.yidu-controls{gap:12px}.yidu-tab{font-size:12px}.yidu-summary-module h2{font-size:16px}}
 
-.yidu-summary-progress{margin:0 0 22px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.yidu-summary-article-original{margin:4px 0 8px;color:var(--muted);font-size:12px;line-height:1.45}
 .yidu-summary-details{min-width:0}
 .yidu-summary-body{margin-top:10px;font-size:14px;line-height:1.72}
 .yidu-summary-body[aria-busy="true"]{color:var(--muted)}

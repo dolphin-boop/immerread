@@ -89,15 +89,18 @@ import { groupArticleModules } from "./lib/summary.js";
     const title = document.createElement("h1");
     title.className = "yidu-summary-title";
     title.textContent = current.article.title;
+    const originalTitle = document.createElement("p");
+    originalTitle.className = "yidu-summary-article-original";
+    originalTitle.textContent = current.article.title;
+    originalTitle.hidden = true;
+    current.summaryTitle = title;
+    current.summaryOriginalTitle = originalTitle;
     const intro = document.createElement("p");
     intro.className = "yidu-view-intro";
     intro.textContent = modules.length + " 个大模块 · 按原文章节组织";
-    const progress = document.createElement("p");
-    progress.className = "yidu-summary-progress";
-    current.summaryProgress = progress;
-    summaryContent.append(title, intro, progress);
+    summaryContent.append(title, originalTitle, intro);
     if (!modules.length) {
-      progress.textContent = "文章中没有可生成导读的正文。";
+      intro.textContent = "文章中没有可生成导读的正文。";
       return;
     }
     for (const [index, module] of modules.entries()) {
@@ -132,7 +135,6 @@ import { groupArticleModules } from "./lib/summary.js";
       section.append(number, details);
       summaryContent.append(section);
     }
-    updateSummaryProgress(current);
     if (activeView === "summary") void runSummaries(current);
   }
 
@@ -147,21 +149,17 @@ import { groupArticleModules } from "./lib/summary.js";
       // 页面连接失效时，保留导读内容供用户继续阅读。
     }
   }
+  function updateSummaryArticleTitle(current, segment) {
+    if (segment?.kind !== "h1" || !current.summaryTitle || !current.summaryOriginalTitle) return;
+    const translated = current.rows.get(segment.id)?.textContent?.trim();
+    if (!translated || translated === current.article.title) return;
+    current.summaryTitle.textContent = translated;
+    current.summaryOriginalTitle.hidden = false;
+  }
   function summaryBody(module) {
     return [...summaryContent.querySelectorAll(".yidu-summary-module")]
       .find((section) => section.dataset.moduleId === module.id)
       ?.querySelector(".yidu-summary-body");
-  }
-
-  function updateSummaryProgress(current) {
-    if (!current.summaryProgress || current.stopped || !current.summaryModules.length) return;
-    const done = current.summaryResults.size;
-    const total = current.summaryModules.length;
-    current.summaryProgress.textContent = (done === total
-      ? "已生成 " + total + " 个导读模块"
-      : "已生成 " + done + " / " + total + " 个导读模块") +
-      (current.summaryCachedCount ? " · 缓存 " + current.summaryCachedCount : "") +
-      (current.summaryCacheError ? " · 部分结果缓存失败" : "");
   }
 
   async function runSummaries(current) {
@@ -205,13 +203,10 @@ import { groupArticleModules } from "./lib/summary.js";
       original.textContent = module.title;
       details.querySelector(".yidu-summary-original")?.remove();
       details.insertBefore(original, body);
-      if (outcome.cached) current.summaryCachedCount += 1;
-      if (outcome.cacheSaved === false) current.summaryCacheError = true;
       const summary = document.createElement("p");
       summary.className = "yidu-summary-overview";
       summary.textContent = outcome.result.summary;
       body.replaceChildren(summary);
-      updateSummaryProgress(current);
     } catch (error) {
       if (!current.stopped) {
         current.summaryFailed.add(module.id);
@@ -503,9 +498,8 @@ import { groupArticleModules } from "./lib/summary.js";
       summaryFailed: new Set(),
       summaryInFlight: new Set(),
       summaryRunning: false,
-      summaryCachedCount: 0,
-      summaryCacheError: false,
-      summaryProgress: null,
+      summaryTitle: null,
+      summaryOriginalTitle: null,
       selectedSegmentIds: new Set(),
       glossaryEpoch: 0
     };
@@ -522,10 +516,6 @@ import { groupArticleModules } from "./lib/summary.js";
 
   function renderArticle(current) {
     content.replaceChildren();
-    const source = document.createElement("p");
-    source.className = "yidu-source";
-    source.textContent = current.article.source;
-    content.append(source);
     let list = null;
     let listKind = "";
     for (const segment of current.article.segments) {
@@ -646,6 +636,7 @@ import { groupArticleModules } from "./lib/summary.js";
     if (fromCache) current.cachedCount += 1;
     current.observer?.unobserve(current.rows.get(item.id));
     renderTranslation(current, item.id, item);
+    updateSummaryArticleTitle(current, segment);
     updateProgress(current);
   }
 
@@ -770,11 +761,7 @@ import { groupArticleModules } from "./lib/summary.js";
 
   function updateProgress(current, activeBatchSize = 0) {
     if (current.stopped || current.failed) return;
-    const done = current.completed.size;
-    const total = current.article.segments.length;
-    if (done === total) setStatus("");
-    else if (activeBatchSize || current.working) setStatus(`正在翻译 · ${done} / ${total}`);
-    else setStatus(`${done} / ${total} · 向下阅读继续翻译${current.cachedCount ? ` · 缓存 ${current.cachedCount}` : ""}`);
+    setStatus(activeBatchSize || current.working ? "正在翻译…" : "");
   }
 
   function setStatus(message) {

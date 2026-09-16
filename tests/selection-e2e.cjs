@@ -104,6 +104,9 @@ const server = http.createServer((_request, response) => {
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
     assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
     assert.equal(await panel.locator("#term-toggle").count(), 0);
+    assert.equal(await panel.locator("#content > .yidu-source").count(), 0);
+    assert.doesNotMatch(await panel.locator("#status").textContent(), /\d+\s*\/\s*\d+|向下阅读|缓存/);
+    const translatedArticleTitle = await panel.locator(".yidu-h1").textContent();
     await panel.setViewportSize({ width: 460, height: 360 });
     await panel.evaluate(() => window.scrollTo(0, 700));
     await panel.waitForFunction(() => window.scrollY > 100);
@@ -119,6 +122,10 @@ const server = http.createServer((_request, response) => {
     });
     await panel.locator("#tab-summary").click();
     assert.equal(await panel.locator("#view-summary .yidu-summary-module").count(), 2);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-title").textContent(), translatedArticleTitle);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-article-original").textContent(), extracted.article.title);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-article-original").isVisible(), true);
+    assert.equal(await panel.locator("#view-summary .yidu-summary-progress").count(), 0);
     for (let attempt = 0; attempt < 20; attempt += 1) {
       if (await worker.evaluate(() => globalThis.yiduSummaryRequests || 0)) break;
       await page.waitForTimeout(25);

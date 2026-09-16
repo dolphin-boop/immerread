@@ -89,6 +89,9 @@ test("renders progressive rich translations in the side panel", () => {
   assert.match(panelScript, /YIDU_SCROLL_TO_SEGMENT/);
   assert.match(panelScript, /YIDU_GLOSSARY_GET/);
   assert.match(panelScript, /YIDU_GLOSSARY_DELETE/);
+  assert.match(panelStyles, /\.yidu-summary-article-original/);
+  assert.doesNotMatch(panelScript, /current\.article\.source|向下阅读继续翻译|已生成 .*导读模块/);
+  assert.doesNotMatch(panelStyles, /\.yidu-summary-progress/);
   assert.doesNotMatch(panelScript, /highlightedText|termsVisible|term-toggle/);
 });
 
