@@ -1,6 +1,6 @@
 import { CACHE_STORAGE_KEY } from "./lib/cache.js";
 import { SUMMARY_STORAGE_KEY } from "./lib/summary.js";
-import { DEFAULT_API_BASE, getDefaultModel } from "./lib/translation.js";
+import { DEFAULT_API_BASE, getDefaultModel, normalizeApiBase } from "./lib/translation.js";
 
 const form = document.getElementById("settingsForm");
 const apiKey = document.getElementById("apiKey");
@@ -11,6 +11,37 @@ const status = document.getElementById("status");
 const clearCache = document.getElementById("clearCache");
 const cacheStatus = document.getElementById("cacheStatus");
 const fieldset = form.querySelector("fieldset");
+const toast = document.getElementById("toast");
+
+let toastTimer = 0;
+function showToast(message, kind) {
+  toast.textContent = message;
+  toast.className = `toast ${kind}`;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 4000);
+}
+toast.addEventListener("click", () => { toast.hidden = true; });
+
+let lastValidatedKey = "";
+async function validateApiKey(key, base) {
+  if (!key || key === lastValidatedKey) return;
+  lastValidatedKey = key;
+  try {
+    const response = await fetch(normalizeApiBase(base) + "/models", {
+      headers: { Authorization: `Bearer ${key}` }
+    });
+    if (response.ok) {
+      showToast("API 密钥验证通过，可以开始使用了。", "success");
+    } else if (response.status === 401 || response.status === 403) {
+      showToast("API 密钥无效，请检查是否复制完整。", "error");
+    } else {
+      showToast(`密钥验证失败（HTTP ${response.status}），请稍后重试。`, "error");
+    }
+  } catch {
+    showToast("无法连接 API 地址，请检查网络或 API 地址设置。", "error");
+  }
+}
 
 const LEGACY_MODELS = new Set(["deepseek-chat", "deepseek-reasoner"]);
 
@@ -61,6 +92,7 @@ async function saveSettings() {
       throw new Error("保存校验失败");
     }
     status.textContent = "已自动保存，关闭页面后仍会保留。";
+    void validateApiKey(values.deepseekApiKey, values.deepseekApiUrl);
   } catch {
     status.textContent = "保存失败，请重新加载扩展后再试。";
   }
