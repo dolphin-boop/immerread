@@ -14,9 +14,9 @@ from PIL import Image, ImageDraw, ImageFont
 S = 1024
 MARGIN = 48
 RADIUS = 224
-TOP = (255, 106, 69)      # FF6A45
-BOTTOM = (222, 61, 28)    # DE3D1C
-LINE = (196, 47, 18)      # C42F12
+TOP = (198, 92, 58)      # C65C3A
+BOTTOM = (152, 58, 33)   # 983A21
+LINE = (128, 48, 27)     # 80301B
 CREAM = (255, 251, 244)
 
 OUT = Path(__file__).parent
