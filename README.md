@@ -18,7 +18,7 @@
 
 ## 为什么是译读
 
-译读是一款英文文章翻译插件。市面上的翻译产品大多把译文和原文混在一起：原文上盖一层、段落后插一段，视线在两种语言之间来回跳跃，既读不痛快中文，也读不完整英文。译读让两种语言各自完整——你可以从头到尾沉浸式地读中文译文，也可以随时回到原文逐句精读英文，互不打扰。
+译读是一款英文文章翻译插件。市面上的翻译产品大多把译文和原文混在一起，视线在两种语言之间来回跳跃，既读不痛快中文，也读不完整英文。译读让两种语言各自完整——你可以从头到尾沉浸式地读中文译文，也可以随时回到原文逐句精读英文，互不打扰。
 
 流畅的译文来自大语言模型：译读使用 LLM 逐段翻译，并支持你建立自己的术语库，把认可的译法固定下来、跨文章复用，越用越顺手。
 
@@ -141,7 +141,7 @@ demo/article-translator/   可复现的界面演示与截图
 
 ImmerRead (译读) is a locally installed Chrome Side Panel extension for reading English articles — tech blogs, news, long-form essays, newsletters — immersively in Chinese, without replacing the source page.
 
-ImmerRead is a translation extension for English articles. Most translation tools mix the two languages on screen: overlaid paragraphs, inserted translations, your eyes jumping back and forth. ImmerRead keeps each language whole — read the Chinese translation end-to-end, or switch back to the original English at any paragraph; neither interrupts the other.
+ImmerRead is a translation extension for English articles. Most translation tools mix the two languages on screen and send your eyes jumping back and forth. ImmerRead keeps each language whole — read the Chinese translation end-to-end, or switch back to the original English at any paragraph; neither interrupts the other.
 
 The fluent Chinese comes from an LLM translating paragraph by paragraph, and from your own terminology glossary: pin the renderings you approve and they are reused across articles.
 

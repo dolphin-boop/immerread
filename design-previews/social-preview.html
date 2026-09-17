@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 640px; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    background: #f7f1e8;
+    color: #2b2118;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 64px 88px;
+    position: relative;
+    overflow: hidden;
+  }
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .45;
+  }
+  .glow.a { width: 520px; height: 520px; background: #e8c9a8; top: -180px; right: -120px; }
+  .glow.b { width: 420px; height: 420px; background: #d9a583; bottom: -200px; left: -100px; opacity: .35; }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    position: relative;
+  }
+  .brand h1 {
+    font-size: 88px;
+    letter-spacing: 6px;
+    color: #a94f32;
+    font-weight: 800;
+  }
+  .brand .en {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #6b5d4f;
+  }
+  .tagline {
+    margin-top: 22px;
+    font-size: 34px;
+    font-weight: 600;
+    color: #2b2118;
+    position: relative;
+  }
+  .tagline small {
+    display: block;
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #7d6f60;
+    letter-spacing: .5px;
+  }
+  .features {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 32px;
+    position: relative;
+    max-width: 1020px;
+  }
+  .feat {
+    background: rgba(255,255,255,.72);
+    border: 1px solid #e5d6c2;
+    border-radius: 14px;
+    padding: 16px 22px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #3c2f24;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .feat .dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #a94f32;
+    flex: none;
+  }
+  .feat span.sub { font-weight: 500; color: #8a7a68; font-size: 18px; }
+</style>
+</head>
+<body>
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="brand">
+    <h1>译读</h1>
+    <div class="en">ImmerRead</div>
+  </div>
+  <div class="tagline">
+    沉浸式阅读英文文章 —— 中文、英文各自完整，互不打扰
+    <small>Read English articles immersively, in whole Chinese or whole English.</small>
+  </div>
+  <div class="features">
+    <div class="feat"><span class="dot"></span>LLM 整篇翻译&nbsp;<span class="sub">流畅中文译文</span></div>
+    <div class="feat"><span class="dot"></span>自定义术语库&nbsp;<span class="sub">译法跨文章复用</span></div>
+    <div class="feat"><span class="dot"></span>导读 · 划线解释&nbsp;<span class="sub">LLM 助学功能</span></div>
+    <div class="feat"><span class="dot"></span>渐进翻译 · 本地缓存&nbsp;<span class="sub">节省 token</span></div>
+  </div>
+</body>
+</html>
