@@ -1,5 +1,7 @@
 {
-  "name": "article-translator-demo",
+  "name": "yidu",
+  "version": "0.5.0",
+  "description": "Chrome side-panel reader for progressive Chinese translation of English technical articles.",
   "private": true,
   "type": "module",
   "scripts": {
