@@ -2,7 +2,7 @@
 
 **中文** | [English](#english)
 
-[![CI](https://github.com/joeseesun/yidu/actions/workflows/ci.yml/badge.svg)](https://github.com/joeseesun/yidu/actions/workflows/ci.yml)
+[![CI](https://github.com/dolphin-boop/yidu/actions/workflows/ci.yml/badge.svg)](https://github.com/dolphin-boop/yidu/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a94f32.svg)](LICENSE)
 [![Chrome 114+](https://img.shields.io/badge/Chrome-114%2B-4285F4.svg)](https://www.google.com/chrome/)
 
@@ -37,13 +37,13 @@
 
 把下面这段话发给你的编程 Agent：
 
-> 请把 https://github.com/joeseesun/yidu 克隆或下载到我选择的长期保留文件夹，告诉我准确完整路径，并指导我在 Chrome 的“加载已解压的扩展程序”中选择这个包含 manifest.json 的文件夹。然后打开扩展选项页，告诉我在哪里填写 DeepSeek API Key；不要查看、复制或要求我把 Key 发到聊天里。最后打开一篇公开英文技术文章，确认侧栏翻译可以使用。
+> 请把 https://github.com/dolphin-boop/yidu 克隆或下载到我选择的长期保留文件夹，告诉我准确完整路径，并指导我在 Chrome 的“加载已解压的扩展程序”中选择这个包含 manifest.json 的文件夹。然后打开扩展选项页，告诉我在哪里填写 DeepSeek API Key；不要查看、复制或要求我把 Key 发到聊天里。最后打开一篇公开英文技术文章，确认侧栏翻译可以使用。
 
 不要把 API Key 发到 AI 对话、源代码、截图、Issue 或公开消息中。请只在译读的扩展选项页中自行填写。
 
 ## 手动安装
 
-1. 下载本仓库 ZIP，解压到一个长期保留的文件夹；也可以运行 `git clone https://github.com/joeseesun/yidu.git`。
+1. 下载本仓库 ZIP，解压到一个长期保留的文件夹；也可以运行 `git clone https://github.com/dolphin-boop/yidu.git`。
 2. 在 Chrome 地址栏打开 `chrome://extensions`。
 3. 启用右上角的“开发者模式”。
 4. 点击“加载已解压的扩展程序”。
@@ -156,7 +156,7 @@ Yidu is a locally installed Chrome Side Panel extension for reading English tech
 
 ## Quick start
 
-1. Download or clone `https://github.com/joeseesun/yidu` into a permanent folder.
+1. Download or clone `https://github.com/dolphin-boop/yidu` into a permanent folder.
 2. Open `chrome://extensions` in Chrome 114 or newer.
 3. Enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 4. Open the extension options and enter your own DeepSeek API key. Never paste the key into chat, source files, screenshots, or public issues.

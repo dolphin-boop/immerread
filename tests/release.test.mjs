@@ -21,6 +21,8 @@ test("public release metadata is complete and consistent", async () => {
   assert.match(readme, /^# 译读 Yidu/m);
   assert.match(readme, /\*\*中文\*\* \| \[English\]\(#english\)/);
   assert.match(readme, /demo\/article-translator\/final-desktop\.png/);
+  assert.match(readme, /github\.com\/dolphin-boop\/yidu/);
+  assert.doesNotMatch(readme, /github\.com\/joeseesun\/yidu/);
   assert.match(readme, /PRIVACY\.md/);
   assert.match(readme, /SECURITY\.md/);
   assert.match(readme, /npm test/);
