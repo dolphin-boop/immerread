@@ -149,3 +149,16 @@ test("loads settings before enabling input and verifies persistence", () => {
   assert.match(optionsScript, /SUMMARY_STORAGE_KEY/);
   assert.match(optionsScript, /chrome\.storage\.local\.remove/);
 });
+
+test("gates the selection menu behind an open side panel", () => {
+  assert.match(panelScript, /chrome\.runtime\.connect\(\{ name: `yidu-panel-open:\$\{tab\.id\}` \}\)/);
+  assert.match(background, /chrome\.runtime\.onConnect\.addListener/);
+  assert.match(background, /yidu-panel-open:/);
+  assert.match(background, /panelOpenTabs\.add\(tabId\)/);
+  assert.match(background, /panelOpenTabs\.delete\(tabId\)/);
+  assert.match(background, /YIDU_PANEL_STATE_QUERY/);
+  assert.match(content, /YIDU_PANEL_STATE/);
+  assert.match(content, /YIDU_PANEL_STATE_QUERY/);
+  assert.match(content, /let panelOpen = false/);
+  assert.match(content, /if \(!panelOpen\) \{\s*hideSelectionUi\(\);/);
+});
