@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-a94f32.svg)](LICENSE)
 [![Chrome 114+](https://img.shields.io/badge/Chrome-114%2B-4285F4.svg)](https://www.google.com/chrome/)
 
-demo/article-translator/20260917-155819.jpg
+![译读桌面界面：英文文章与右侧中文译文](demo/article-translator/20260917-155819.jpg)
 
 > 把英文技术文章变成一份安静、可跟随阅读的中文侧栏，不重建原网页，也不打断阅读位置。
 >
