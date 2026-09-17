@@ -7,7 +7,7 @@
   html, body { width: 1280px; height: 640px; }
   body {
     font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
-    background: #f7f1e8;
+    background: linear-gradient(120deg, #fdeeea 0%, #f9ecf2 38%, #ecebfb 72%, #e3e9fb 100%);
     color: #2b2118;
     display: flex;
     align-items: center;
@@ -17,8 +17,8 @@
     overflow: hidden;
   }
   .glow { position: absolute; border-radius: 50%; filter: blur(90px); }
-  .glow.a { width: 460px; height: 460px; background: #ecd2b4; top: -160px; left: 240px; opacity: .5; }
-  .glow.b { width: 420px; height: 420px; background: #ddb296; bottom: -200px; right: -80px; opacity: .4; }
+  .glow.a { width: 460px; height: 460px; background: #f6cfc4; top: -160px; left: 240px; opacity: .55; }
+  .glow.b { width: 460px; height: 460px; background: #c3c8f2; bottom: -220px; right: -100px; opacity: .55; }
 
   .left { width: 470px; flex: none; position: relative; }
   .brand { display: flex; align-items: center; gap: 18px; }
@@ -86,11 +86,20 @@
     font-weight: 600;
     transform: rotate(-2deg);
   }
+  .spark { position: absolute; border-radius: 6px; }
+  .spark.s1 { width: 34px; height: 9px; background: #e2607a; top: 96px; left: 418px; transform: rotate(52deg); }
+  .spark.s2 { width: 44px; height: 9px; background: #d1662f; top: 138px; left: 446px; transform: rotate(52deg); }
+  .spark.s3 { width: 30px; height: 8px; background: #7a86e8; top: 42px; right: 96px; transform: rotate(52deg); }
+  .spark.s4 { width: 38px; height: 8px; background: #9aa3f0; top: 62px; right: 62px; transform: rotate(52deg); }
 </style>
 </head>
 <body>
   <div class="glow a"></div>
   <div class="glow b"></div>
+  <div class="spark s1"></div>
+  <div class="spark s2"></div>
+  <div class="spark s3"></div>
+  <div class="spark s4"></div>
 
   <div class="left">
     <div class="brand">
