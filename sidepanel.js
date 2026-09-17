@@ -27,6 +27,7 @@ import { groupArticleModules } from "./lib/summary.js";
   let editingSource = "";
   let session = null;
   let reloadTimer = 0;
+  let panelPort = null;
 
   document.getElementById("settings").addEventListener("click", () => {
     chrome.runtime.sendMessage({ type: "YIDU_OPEN_OPTIONS" });
@@ -58,7 +59,17 @@ import { groupArticleModules } from "./lib/summary.js";
     return false;
   });
 
+  void announcePanelOpen();
   void loadActiveArticle();
+
+  async function announcePanelOpen() {
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id != null) panelPort = chrome.runtime.connect({ name: `yidu-panel-open:${tab.id}` });
+    } catch {
+      // 无法确认所属标签页时，划词浮窗保持关闭。
+    }
+  }
 
   function selectView(name) {
     activeView = name;

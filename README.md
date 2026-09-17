@@ -14,7 +14,7 @@
 
 译读（ImmerRead）是一款本地安装的 Chrome Side Panel 扩展，为**各类英文文章**（技术博客、新闻报道、深度长文、Substack newsletter 等）提供沉浸式的整篇中文阅读体验。它在右侧渐进翻译全文，提供章节导读、划词翻译与解释、自定义术语库，并把密钥和缓存保存在你自己的浏览器中。
 
-**已验证（2026-09-17）：** `npm test` 32/32 通过，`npm run check` 通过。项目使用原生 HTML、CSS 和 JavaScript，无构建步骤。
+**已验证（2026-09-17）：** `npm test` 34/34 通过，`npm run check` 通过。项目使用原生 HTML、CSS 和 JavaScript，无构建步骤。
 
 ## 为什么是译读
 
@@ -30,7 +30,7 @@
 | 沉浸式双语阅读 | 中文译文与英文原文各自完整，滚动原文时译文自动定位到对应段落 |
 | 自定义术语库 | 固定自己认可的译法，跨文章复用，只重翻受影响的段落 |
 | 章节导读 | 按原文章节生成中文标题和最多三句、150 字的概述，先把握全局再深入 |
-| 划词助学 | 在原文选中英文，可即时翻译或让 LLM 结合语境解释，顺手存为固定译法 |
+| 划词助学 | 在原文选中英文，可即时翻译或让 LLM 结合语境解释，顺手存为固定译法；仅在侧栏打开时启用 |
 | 复杂内容保护 | 图片、图表、视频和交互模块留在原网页；可识别的表格叶子单元格在原位显示小号译文 |
 | 本地缓存 | 译文和导读最多缓存 20 篇文章、保留 30 天，可随时清除 |
 | 一致排版 | 右侧译文统一为纯文本，避免链接、粗体等原文样式被模型随机继承 |
@@ -145,7 +145,7 @@ Most translation tools mix the two languages on screen: overlaid paragraphs, ins
 - Immersive bilingual reading: scroll the source and the translation follows paragraph by paragraph.
 - A custom terminology glossary: pin your preferred translations, reused across articles, retranslating only affected paragraphs.
 - Section-based reading guides: Chinese titles and summaries of at most three sentences / 150 characters per section.
-- Learning aids on selection: translate or ask the LLM to explain selected English in context, and save terms to your glossary.
+- Learning aids on selection: translate or ask the LLM to explain selected English in context, and save terms to your glossary. Active only while the side panel is open.
 - Local translation and guide caches with a 20-article / 30-day limit.
 - Plain-text translation rendering for consistent and safe typography.
 - No account, developer-operated backend, analytics, advertising, or telemetry.
@@ -175,7 +175,7 @@ npm test
 npm run check
 ```
 
-Verified on 2026-09-17: 32 tests passed and syntax checks passed. The project uses plain HTML, CSS, and JavaScript with no build step.
+Verified on 2026-09-17: 34 tests passed and syntax checks passed. The project uses plain HTML, CSS, and JavaScript with no build step.
 
 ## License
 

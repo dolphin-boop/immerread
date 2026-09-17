@@ -19,14 +19,37 @@ let summaryWriteChain = Promise.resolve();
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
 
+const panelOpenTabs = new Set();
+
+chrome.runtime.onConnect.addListener((port) => {
+  const match = /^yidu-panel-open:(\d+)$/.exec(port.name || "");
+  if (!match) return;
+  const tabId = Number(match[1]);
+  panelOpenTabs.add(tabId);
+  notifyPanelState(tabId, true);
+  port.onDisconnect.addListener(() => {
+    panelOpenTabs.delete(tabId);
+    notifyPanelState(tabId, false);
+  });
+});
+
+function notifyPanelState(tabId, open) {
+  chrome.tabs.sendMessage(tabId, { type: "YIDU_PANEL_STATE", payload: { open } }).catch(() => undefined);
+}
+
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") void chrome.runtime.openOptionsPage();
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "YIDU_OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
+    return false;
+  }
+
+  if (message?.type === "YIDU_PANEL_STATE_QUERY") {
+    sendResponse({ ok: true, open: panelOpenTabs.has(sender.tab?.id) });
     return false;
   }
 

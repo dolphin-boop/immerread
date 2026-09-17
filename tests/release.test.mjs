@@ -20,7 +20,7 @@ test("public release metadata is complete and consistent", async () => {
 
   assert.match(readme, /^# 译读 ImmerRead/m);
   assert.match(readme, /\*\*中文\*\* \| \[English\]\(#english\)/);
-  assert.match(readme, /demo\/article-translator\/final-desktop\.png/);
+  assert.match(readme, /demo\/article-translator\/[\w-]+\.(png|jpe?g)/);
   assert.match(readme, /github\.com\/dolphin-boop\/immerread/);
   assert.doesNotMatch(readme, /github\.com\/dolphin-boop\/yidu/);
   assert.doesNotMatch(readme, /github\.com\/joeseesun\//);

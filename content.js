@@ -13,6 +13,12 @@
   let cellNotes = new Map();
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "YIDU_PANEL_STATE") {
+      panelOpen = Boolean(message.payload?.open);
+      if (!panelOpen) hideSelectionUi();
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type === "YIDU_REQUEST_SCROLL_SYNC") {
       scheduleScrollSync();
       sendResponse({ ok: true });
@@ -341,6 +347,15 @@
   let selectedText = "";
   let selectedRect = null;
   let requestId = 0;
+  let panelOpen = false;
+
+  try {
+    void chrome.runtime.sendMessage({ type: "YIDU_PANEL_STATE_QUERY" })
+      .then((response) => { panelOpen = Boolean(response?.open); })
+      .catch(() => undefined);
+  } catch {
+    // 扩展上下文失效时保持浮窗关闭。
+  }
 
   document.addEventListener("mouseup", onSelectionChange);
   document.addEventListener("keyup", (event) => {
@@ -359,6 +374,10 @@
   function onSelectionChange(event) {
     if (event?.target && selectionRoot?.contains(event.target)) return;
     emitSelectionSync();
+    if (!panelOpen) {
+      hideSelectionUi();
+      return;
+    }
     if (selectionShadow?.querySelector(".yidu-result")) return;
     const selection = window.getSelection();
     const text = (selection?.toString() || "").replace(/\s+/g, " ").trim();
