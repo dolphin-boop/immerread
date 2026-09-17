@@ -18,9 +18,13 @@
 
 ## 为什么是译读
 
-常见翻译产品的译文总是中英夹杂：原文上盖一层、段落后插一段，读起来视线在两种语言之间来回跳跃，既读不痛快中文，也读不完整英文。整页替换又会丢掉原站的排版、图片和交互。
+译读是一款英文文章翻译插件。市面上的翻译产品大多把译文和原文混在一起：原文上盖一层、段落后插一段，视线在两种语言之间来回跳跃，既读不痛快中文，也读不完整英文。译读让两种语言各自完整——你可以从头到尾沉浸式地读中文译文，也可以随时回到原文逐句精读英文，互不打扰。
 
-译读走的是另一条路：**原文与译文各自完整**。原网页负责图片、图表、视频和交互，右侧侧栏负责连续、干净的中文阅读——你可以从头到尾沉浸式地读中文译文，也可以随时回到原文逐句精读英文。两种语言互不打扰。
+流畅的译文来自大语言模型：译读使用 LLM 逐段翻译，并支持你建立自己的术语库，把认可的译法固定下来、跨文章复用，越用越顺手。
+
+翻译之外，译读还提供依托 LLM 的助学功能：章节导读帮你先把握全文脉络，划线解释让你随手指向看不懂的英文，获得结合语境的讲解。
+
+翻译是渐进式的——优先翻译你正在阅读的部分，不必等待整篇完成；译文与导读都会缓存在本地，重读同一篇文章不再消耗 token。
 
 ## 核心能力
 
@@ -137,7 +141,13 @@ demo/article-translator/   可复现的界面演示与截图
 
 ImmerRead (译读) is a locally installed Chrome Side Panel extension for reading English articles — tech blogs, news, long-form essays, newsletters — immersively in Chinese, without replacing the source page.
 
-Most translation tools mix the two languages on screen: overlaid paragraphs, inserted translations, your eyes jumping back and forth. ImmerRead keeps each language whole: the original page stays for images, charts, video, and interaction, while a clean, continuous LLM-powered Chinese translation flows in the side panel. Read the Chinese end-to-end, or switch back to the original English at any paragraph — neither interrupts the other.
+ImmerRead is a translation extension for English articles. Most translation tools mix the two languages on screen: overlaid paragraphs, inserted translations, your eyes jumping back and forth. ImmerRead keeps each language whole — read the Chinese translation end-to-end, or switch back to the original English at any paragraph; neither interrupts the other.
+
+The fluent Chinese comes from an LLM translating paragraph by paragraph, and from your own terminology glossary: pin the renderings you approve and they are reused across articles.
+
+Beyond translation, LLM-powered learning aids help you study as you read: section guides outline the article before you dive in, and selecting any English text gives you an in-context explanation.
+
+Translation is progressive — your current reading position comes first, no waiting for the whole article — and translations and guides are cached locally, so rereading an article costs no extra tokens.
 
 ## What you get
 
