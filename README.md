@@ -6,9 +6,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-a94f32.svg)](LICENSE)
 [![Chrome 114+](https://img.shields.io/badge/Chrome-114%2B-4285F4.svg)](https://www.google.com/chrome/)
 
-![译读桌面界面：英文文章与右侧中文译文](<img width="1861" height="913" alt="image" src="https://github.com/user-attachments/assets/7cc8d4f6-bf03-4713-9f19-e541661ff8e7" />
-)
-
 > 把英文技术文章变成一份安静、可跟随阅读的中文侧栏，不重建原网页，也不打断阅读位置。
 >
 > Turn English technical articles into a calm, synchronized Chinese reading companion without rebuilding the source page.
