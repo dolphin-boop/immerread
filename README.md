@@ -6,7 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-a94f32.svg)](LICENSE)
 [![Chrome 114+](https://img.shields.io/badge/Chrome-114%2B-4285F4.svg)](https://www.google.com/chrome/)
 
-![译读桌面界面：英文文章与右侧中文译文](demo/article-translator/final-desktop.png)
+![译读桌面界面：英文文章与右侧中文译文](<img width="1861" height="913" alt="image" src="https://github.com/user-attachments/assets/7cc8d4f6-bf03-4713-9f19-e541661ff8e7" />
+)
 
 > 把英文技术文章变成一份安静、可跟随阅读的中文侧栏，不重建原网页，也不打断阅读位置。
 >
@@ -122,15 +123,6 @@ demo/article-translator/   可复现的界面演示与截图
 ## 项目定位与反馈
 
 这是一个可自行下载、Fork 和改造的个人开源项目，目前不承诺公开 Issue、Pull Request 的响应时效，也没有 Bug Bounty。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告；普通使用问题可以先查看本 README、仓库历史和浏览器控制台。
-
-## 关于向阳乔木
-
-- 网站：[qiaomu.ai](https://qiaomu.ai)
-- 博客：[blog.qiaomu.ai](https://blog.qiaomu.ai)
-- 推荐：[tuijian.qiaomu.ai](https://tuijian.qiaomu.ai)
-- X：[@vista8](https://x.com/vista8)
-- GitHub：[@joeseesun](https://github.com/joeseesun)
-- 微信公众号：向阳乔木推荐看
 
 ## 开源许可
 
