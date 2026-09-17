@@ -1,34 +1,36 @@
-# 译读 Yidu
+# 译读 ImmerRead
 
 **中文** | [English](#english)
 
-[![CI](https://github.com/dolphin-boop/yidu/actions/workflows/ci.yml/badge.svg)](https://github.com/dolphin-boop/yidu/actions/workflows/ci.yml)
+[![CI](https://github.com/dolphin-boop/immerread/actions/workflows/ci.yml/badge.svg)](https://github.com/dolphin-boop/immerread/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a94f32.svg)](LICENSE)
 [![Chrome 114+](https://img.shields.io/badge/Chrome-114%2B-4285F4.svg)](https://www.google.com/chrome/)
 
 ![译读桌面界面：英文文章与右侧中文译文](demo/article-translator/20260917-155819.jpg)
 
-> 把英文技术文章变成一份安静、可跟随阅读的中文侧栏，不重建原网页，也不打断阅读位置。
+> 沉浸式阅读英文文章：由 LLM 驱动的整篇中文译文在侧栏随阅读同步出现，不重建原网页，也不打断阅读位置。
 >
-> Turn English technical articles into a calm, synchronized Chinese reading companion without rebuilding the source page.
+> Read English articles immersively — an LLM-powered Chinese translation follows your reading in a side panel, without rebuilding the page or breaking your flow.
 
-译读是一款本地安装的 Chrome Side Panel 扩展。它在右侧渐进翻译英文文章，提供章节导读、划词翻译与解释、固定译法库，并把密钥和缓存保存在当前浏览器中。
+译读（ImmerRead）是一款本地安装的 Chrome Side Panel 扩展，为**各类英文文章**（技术博客、新闻报道、深度长文、Substack newsletter 等）提供沉浸式的整篇中文阅读体验。它在右侧渐进翻译全文，提供章节导读、划词翻译与解释、自定义术语库，并把密钥和缓存保存在你自己的浏览器中。
 
 **已验证（2026-09-17）：** `npm test` 32/32 通过，`npm run check` 通过。项目使用原生 HTML、CSS 和 JavaScript，无构建步骤。
 
-## 为什么做译读
+## 为什么是译读
 
-阅读长篇英文技术文章时，整页替换会丢失原站上下文，复制到聊天工具又会打断阅读。译读保留原网页，让中文译文在 Chrome 右侧随阅读位置同步出现：原文负责图片、图表、视频和交互，侧栏负责清晰、连续的中文阅读。
+常见翻译产品的译文总是中英夹杂：原文上盖一层、段落后插一段，读起来视线在两种语言之间来回跳跃，既读不痛快中文，也读不完整英文。整页替换又会丢掉原站的排版、图片和交互。
+
+译读走的是另一条路：**原文与译文各自完整**。原网页负责图片、图表、视频和交互，右侧侧栏负责连续、干净的中文阅读——你可以从头到尾沉浸式地读中文译文，也可以随时回到原文逐句精读英文。两种语言互不打扰。
 
 ## 核心能力
 
 | 能力 | 你会得到什么 |
 | --- | --- |
-| 渐进翻译 | 优先翻译当前阅读范围，标题、正文、列表和引用按原顺序呈现 |
-| 原文同步 | 滚动英文原文时，右侧译文自动定位到对应段落 |
-| 章节导读 | 按原文章节生成中文标题和最多三句、150 字的概述 |
-| 划词工具 | 在原网页选中英文后，可翻译、解释或保存固定译法 |
-| 固定译法库 | 自定义术语跨文章复用，只重翻受影响的段落 |
+| LLM 整篇翻译 | 由大语言模型逐段翻译，优先翻译当前阅读范围，标题、正文、列表和引用按原顺序呈现 |
+| 沉浸式双语阅读 | 中文译文与英文原文各自完整，滚动原文时译文自动定位到对应段落 |
+| 自定义术语库 | 固定自己认可的译法，跨文章复用，只重翻受影响的段落 |
+| 章节导读 | 按原文章节生成中文标题和最多三句、150 字的概述，先把握全局再深入 |
+| 划词助学 | 在原文选中英文，可即时翻译或让 LLM 结合语境解释，顺手存为固定译法 |
 | 复杂内容保护 | 图片、图表、视频和交互模块留在原网页；可识别的表格叶子单元格在原位显示小号译文 |
 | 本地缓存 | 译文和导读最多缓存 20 篇文章、保留 30 天，可随时清除 |
 | 一致排版 | 右侧译文统一为纯文本，避免链接、粗体等原文样式被模型随机继承 |
@@ -37,13 +39,13 @@
 
 把下面这段话发给你的编程 Agent：
 
-> 请把 https://github.com/dolphin-boop/yidu 克隆或下载到我选择的长期保留文件夹，告诉我准确完整路径，并指导我在 Chrome 的“加载已解压的扩展程序”中选择这个包含 manifest.json 的文件夹。然后打开扩展选项页，告诉我在哪里填写 DeepSeek API Key；不要查看、复制或要求我把 Key 发到聊天里。最后打开一篇公开英文技术文章，确认侧栏翻译可以使用。
+> 请把 https://github.com/dolphin-boop/immerread 克隆或下载到我选择的长期保留文件夹，告诉我准确完整路径，并指导我在 Chrome 的“加载已解压的扩展程序”中选择这个包含 manifest.json 的文件夹。然后打开扩展选项页，告诉我在哪里填写 DeepSeek API Key；不要查看、复制或要求我把 Key 发到聊天里。最后打开一篇公开英文文章，确认侧栏翻译可以使用。
 
 不要把 API Key 发到 AI 对话、源代码、截图、Issue 或公开消息中。请只在译读的扩展选项页中自行填写。
 
 ## 手动安装
 
-1. 下载本仓库 ZIP，解压到一个长期保留的文件夹；也可以运行 `git clone https://github.com/dolphin-boop/yidu.git`。
+1. 下载本仓库 ZIP，解压到一个长期保留的文件夹；也可以运行 `git clone https://github.com/dolphin-boop/immerread.git`。
 2. 在 Chrome 地址栏打开 `chrome://extensions`。
 3. 启用右上角的“开发者模式”。
 4. 点击“加载已解压的扩展程序”。
@@ -53,7 +55,7 @@
 
 这是一个本地加载的扩展，不会自动更新。拉取新版本后，请在 `chrome://extensions` 中点击译读卡片上的“重新加载”，并刷新已打开的文章页面。移动或删除项目文件夹后，需要从新位置重新加载扩展。
 
-## 配置 DeepSeek
+## 配置模型服务
 
 默认配置为：
 
@@ -62,7 +64,7 @@ API Base: https://api.deepseek.com
 Model: deepseek-flash
 ```
 
-译读也允许填写 OpenAI 兼容的 API Base 和模型名。使用自定义服务时，文章内容会被发送到你配置的服务地址，请先确认该服务的隐私政策、数据保留方式和计费规则。
+译读也允许填写任何 OpenAI 兼容的 API Base 和模型名，你可以自由选择翻译质量与成本适合自己的模型。使用自定义服务时，文章内容会被发送到你配置的服务地址，请先确认该服务的隐私政策、数据保留方式和计费规则。
 
 API Key、模型和接口地址保存在 Chrome 本地扩展存储中。Chrome 扩展存储不是加密密码保险箱；建议使用独立 Key、设置消费限额，并在设备或浏览器配置泄露后立即轮换或撤销 Key。
 
@@ -70,7 +72,7 @@ API Key、模型和接口地址保存在 Chrome 本地扩展存储中。Chrome �
 
 1. 打开包含英文正文的普通网页。
 2. 点击译读图标，Chrome 会在右侧打开侧栏。
-3. 在“中文翻译”中阅读随原文滚动的译文。
+3. 在“中文翻译”中沉浸式阅读随原文滚动的译文。
 4. 打开“导读”，查看按原文章节组织的中文概述。
 5. 在原网页选中英文，使用“翻译 / 解释 / 固定译法”。
 6. 在“固定译法”页签中添加、编辑或删除自己的术语。
@@ -133,33 +135,36 @@ demo/article-translator/   可复现的界面演示与截图
 
 # English
 
-Yidu is a locally installed Chrome Side Panel extension for reading English technical articles in Chinese without replacing the source page. It progressively translates the current reading area, follows source-page scrolling, generates section-based reading guides, explains selected text, and maintains a user-controlled glossary.
+ImmerRead (译读) is a locally installed Chrome Side Panel extension for reading English articles — tech blogs, news, long-form essays, newsletters — immersively in Chinese, without replacing the source page.
+
+Most translation tools mix the two languages on screen: overlaid paragraphs, inserted translations, your eyes jumping back and forth. ImmerRead keeps each language whole: the original page stays for images, charts, video, and interaction, while a clean, continuous LLM-powered Chinese translation flows in the side panel. Read the Chinese end-to-end, or switch back to the original English at any paragraph — neither interrupts the other.
 
 ## What you get
 
-- Progressive Chinese translation for headings, paragraphs, lists, and quotes.
-- Scroll synchronization between the source article and the side panel.
-- Section-based Chinese guides, limited to three sentences and 150 Chinese characters.
-- Selected-text translation, explanation, and user-confirmed terminology.
+- Full-article Chinese translation by an LLM, progressively rendered for headings, paragraphs, lists, and quotes.
+- Immersive bilingual reading: scroll the source and the translation follows paragraph by paragraph.
+- A custom terminology glossary: pin your preferred translations, reused across articles, retranslating only affected paragraphs.
+- Section-based reading guides: Chinese titles and summaries of at most three sentences / 150 characters per section.
+- Learning aids on selection: translate or ask the LLM to explain selected English in context, and save terms to your glossary.
 - Local translation and guide caches with a 20-article / 30-day limit.
 - Plain-text translation rendering for consistent and safe typography.
-- No Yidu account, developer-operated backend, analytics, advertising, or telemetry.
+- No account, developer-operated backend, analytics, advertising, or telemetry.
 
 ## Quick start
 
-1. Download or clone `https://github.com/dolphin-boop/yidu` into a permanent folder.
+1. Download or clone `https://github.com/dolphin-boop/immerread` into a permanent folder.
 2. Open `chrome://extensions` in Chrome 114 or newer.
 3. Enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 4. Open the extension options and enter your own DeepSeek API key. Never paste the key into chat, source files, screenshots, or public issues.
-5. Open a public English article and click the Yidu toolbar icon.
+5. Open a public English article and click the ImmerRead toolbar icon.
 
-The default API base is `https://api.deepseek.com`, and the default model identifier is `deepseek-flash`. You may configure another OpenAI-compatible endpoint and model, but article content will then be sent to that provider under its own terms and retention policy.
+The default API base is `https://api.deepseek.com`, and the default model identifier is `deepseek-flash`. You may configure any OpenAI-compatible endpoint and model, but article content will then be sent to that provider under its own terms and retention policy.
 
 ## Privacy and limits
 
-Keys, settings, glossary entries, and recent caches stay in Chrome local extension storage. Translation and guide requests go directly from the extension to DeepSeek or the compatible endpoint you configure. Yidu does not provide API credits and is not currently distributed through the Chrome Web Store.
+Keys, settings, glossary entries, and recent caches stay in Chrome local extension storage. Translation and guide requests go directly from the extension to DeepSeek or the compatible endpoint you configure. ImmerRead does not provide API credits and is not currently distributed through the Chrome Web Store.
 
-Yidu does not OCR images or translate video, canvas, or interactive content. Complex layouts that cannot be safely linearized stay on the source page. The translation panel intentionally renders plain text instead of copying links or inline typography from the source.
+ImmerRead does not OCR images or translate video, canvas, or interactive content. Complex layouts that cannot be safely linearized stay on the source page. The translation panel intentionally renders plain text instead of copying links or inline typography from the source.
 
 See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for the complete data and reporting boundaries.
 

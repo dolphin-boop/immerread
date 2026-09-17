@@ -18,11 +18,13 @@ test("public release metadata is complete and consistent", async () => {
   const packageJson = JSON.parse(packageText);
   const manifest = JSON.parse(manifestText);
 
-  assert.match(readme, /^# 译读 Yidu/m);
+  assert.match(readme, /^# 译读 ImmerRead/m);
   assert.match(readme, /\*\*中文\*\* \| \[English\]\(#english\)/);
   assert.match(readme, /demo\/article-translator\/final-desktop\.png/);
-  assert.match(readme, /github\.com\/dolphin-boop\/yidu/);
-  assert.doesNotMatch(readme, /github\.com\/joeseesun\/yidu/);
+  assert.match(readme, /github\.com\/dolphin-boop\/immerread/);
+  assert.doesNotMatch(readme, /github\.com\/dolphin-boop\/yidu/);
+  assert.doesNotMatch(readme, /github\.com\/joeseesun\//);
+  assert.doesNotMatch(readme, /向阳乔木|qiaomu|vista8|joeseesun/i);
   assert.match(readme, /PRIVACY\.md/);
   assert.match(readme, /SECURITY\.md/);
   assert.match(readme, /npm test/);
