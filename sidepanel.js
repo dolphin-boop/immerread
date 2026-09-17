@@ -653,9 +653,9 @@ import { groupArticleModules } from "./lib/summary.js";
     const row = current.rows.get(id);
     const segment = current.segmentsById.get(id);
     if (!row || !segment) return;
-    const fragment = buildSafeFragment(item.translation, segment);
-    if (/^h[1-6]$/.test(segment.kind)) cleanHeadingFragment(fragment);
-    row.replaceChildren(fragment);
+    let text = plainTranslationText(item.translation);
+    if (/^h[1-6]$/.test(segment.kind)) text = cleanHeadingText(text);
+    row.textContent = text;
     if (current.completed.has(id)) {
       row.classList.remove("yidu-pending", "yidu-refreshing");
       row.removeAttribute("aria-busy");
@@ -663,58 +663,16 @@ import { groupArticleModules } from "./lib/summary.js";
     }
   }
 
-  function cleanHeadingFragment(fragment) {
-    const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
-    let node;
-    while ((node = walker.nextNode())) {
-      if (!node.nodeValue.trim()) continue;
-      node.nodeValue = node.nodeValue.replace(/^\s*[:：]\s*/, "");
-      if (node.nodeValue.trim()) break;
-    }
+  function cleanHeadingText(value) {
+    return String(value || "").replace(/^\s*[:：]\s*/, "");
   }
 
-  function buildSafeFragment(markup, segment) {
+  function plainTranslationText(markup) {
     const template = document.createElement("template");
     template.innerHTML = String(markup || "");
-    const fragment = document.createDocumentFragment();
-    for (const node of template.content.childNodes) {
-      const safe = sanitizeNode(node, segment);
-      if (safe) fragment.append(safe);
-    }
-    return fragment;
-  }
-
-  function sanitizeNode(node, segment) {
-    if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || "");
-    if (node.nodeType !== Node.ELEMENT_NODE) return null;
-    const tag = node.tagName.toLowerCase();
-    if (tag === "script" || tag === "style") return null;
-    if (tag === "br") return document.createElement("br");
-    let element;
-    if (tag === "strong" || tag === "b") element = document.createElement("strong");
-    else if (tag === "u") element = document.createElement("u");
-    else if (tag === "em" || tag === "i") {
-      element = document.createElement("span");
-      element.className = "yidu-emphasis";
-    } else if (tag === "code") element = document.createElement("code");
-    else if (tag === "a") {
-      const linkIndex = node.getAttribute("data-link");
-      const href = /^\d+$/.test(linkIndex || "") ? segment.links?.[Number(linkIndex)] : "";
-      if (!href) return copyChildren(node, document.createDocumentFragment(), segment);
-      element = document.createElement("a");
-      element.href = href;
-      element.target = "_blank";
-      element.rel = "noopener noreferrer";
-    } else return copyChildren(node, document.createDocumentFragment(), segment);
-    return copyChildren(node, element, segment);
-  }
-
-  function copyChildren(source, target, segment) {
-    for (const child of source.childNodes) {
-      const safe = sanitizeNode(child, segment);
-      if (safe) target.append(safe);
-    }
-    return target;
+    template.content.querySelectorAll("script, style").forEach((node) => node.remove());
+    template.content.querySelectorAll("br").forEach((node) => node.replaceWith("\n"));
+    return template.content.textContent || "";
   }
 
   function showError(current, message, setupRequired) {

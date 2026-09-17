@@ -69,7 +69,7 @@ test("extracts article semantics without rebuilding the source page", () => {
   assert.doesNotMatch(content, /segments\.length >= 64|totalCharacters \+ text\.length > 30000/);
 });
 
-test("renders progressive rich translations in the side panel", () => {
+test("renders progressive plain-text translations in the side panel", () => {
   assert.match(panelHtml, />中文翻译</);
   assert.doesNotMatch(panelHtml, /AI 术语高亮|term-toggle/);
   assert.match(panelHtml, /tab-summary/);
@@ -93,11 +93,10 @@ test("renders progressive rich translations in the side panel", () => {
   assert.doesNotMatch(panelScript, /lastMessage = error\?\.message/);
   assert.match(panelScript, /YIDU_CACHE_GET/);
   assert.match(panelScript, /YIDU_CACHE_PUT/);
-  assert.match(panelScript, /sanitizeNode/);
-  assert.match(panelScript, /document\.createElement\("strong"\)/);
-  assert.match(panelScript, /document\.createElement\("u"\)/);
-  assert.match(panelScript, /document\.createElement\("a"\)/);
-  assert.match(panelScript, /className = "yidu-emphasis"/);
+  assert.match(panelScript, /plainTranslationText/);
+  assert.match(panelScript, /querySelectorAll\("script, style"\)/);
+  assert.match(panelScript, /querySelectorAll\("br"\)/);
+  assert.doesNotMatch(panelScript, /function sanitizeNode|function buildSafeFragment/);
   assert.match(panelHtml, /role="tablist"/);
   assert.match(panelScript, /groupArticleModules/);
   assert.match(background, /YIDU_SUMMARIZE_MODULE/);

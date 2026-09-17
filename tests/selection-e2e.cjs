@@ -68,14 +68,19 @@ const server = http.createServer((_request, response) => {
           const protectedTerms = input.segments.some((segment) => segment.text.includes("__YIDU_TERM_"));
           if (protectedTerms) globalThis.yiduProtectedRetries = (globalThis.yiduProtectedRetries || 0) + 1;
           if (locked) await new Promise((resolve) => setTimeout(resolve, 400));
-          const items = input.segments.map((segment) => ({
-            id: segment.id,
-            translation: protectedTerms && globalThis.yiduDropProtectedToken
+          const items = input.segments.map((segment) => {
+            const translation = protectedTerms && globalThis.yiduDropProtectedToken
               ? "模型忽略了固定译法占位符"
               : (segment.kind === "h1" ? ":" : "") + (protectedTerms ? "复数新译文：" : pluralLocked ? "复数旧译文：" : locked ? "新术语译文：" : "译文：")
-                + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们")),
-            terms: pluralLocked && !protectedTerms ? [{ source: "agents", target: "智能体们" }] : []
-          }));
+                + (locked && !pluralLocked ? segment.text.replace(/\bagent\b/gi, "代理体") : segment.text.replace(/\bagents\b/gi, "智能体们"));
+            return {
+              id: segment.id,
+              translation: segment.text.startsWith("Evaluation harnesses")
+                ? "<strong>" + translation + "</strong><script>不应显示</script>"
+                : translation,
+              terms: pluralLocked && !protectedTerms ? [{ source: "agents", target: "智能体们" }] : []
+            };
+          });
           return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ items }) } }] }), { status: 200 });
         }
         const content = request.messages[0].content.includes("中文解释") ? "智能体评测的简短解释。" : "评测框架。";
@@ -102,6 +107,13 @@ const server = http.createServer((_request, response) => {
     await panel.goto(extensionOrigin + "/sidepanel.html");
     await panel.locator(".yidu-skipped").first().waitFor();
     await panel.locator(".yidu-h1[data-translated=\"true\"]").waitFor();
+    const richTextId = extracted.article.segments.find((segment) => segment.text.startsWith("Evaluation harnesses")).id;
+    const plainTextRow = panel.locator('.yidu-segment[data-segment-id="' + richTextId + '"][data-translated="true"]');
+    await plainTextRow.waitFor();
+    assert.equal(await plainTextRow.locator("strong, a, u, em, code, script").count(), 0,
+      "模型或旧缓存返回的标签必须统一降为纯文本");
+    assert.match(await plainTextRow.textContent(), /^译文：Evaluation harnesses/);
+    assert.doesNotMatch(await plainTextRow.textContent(), /不应显示/);
     assert.doesNotMatch(await panel.locator(".yidu-h1").textContent(), /^\s*[:：]/);
     assert.equal(await panel.locator("#term-toggle").count(), 0);
     assert.equal(await panel.locator("#content > .yidu-source").count(), 0);
